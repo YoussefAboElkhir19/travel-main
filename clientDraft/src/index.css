@@ -1,0 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 94.1%;
+  --radius: 0.75rem;
+}
+
+.light {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 215 20.2% 65.1%;
+}
+
+.theme-default {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 94.1%;
+  --radius: 0.75rem;
+}
+
+.theme-forest {
+  --background: 120 25% 15%;
+  --foreground: 110 30% 95%;
+  --card: 120 25% 18%;
+  --card-foreground: 110 30% 95%;
+  --popover: 120 25% 15%;
+  --popover-foreground: 110 30% 95%;
+  --primary: 100 60% 45%;
+  --primary-foreground: 100 100% 95%;
+  --secondary: 120 25% 25%;
+  --secondary-foreground: 110 30% 95%;
+  --muted: 120 25% 22%;
+  --muted-foreground: 110 15% 65%;
+  --accent: 120 25% 30%;
+  --accent-foreground: 110 30% 95%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 100% 95%;
+  --border: 120 25% 25%;
+  --input: 120 25% 22%;
+  --ring: 100 60% 65%;
+  --radius: 0.5rem;
+}
+
+.theme-ocean {
+  --background: 210 60% 12%;
+  --foreground: 200 40% 96%;
+  --card: 210 60% 15%;
+  --card-foreground: 200 40% 96%;
+  --popover: 210 60% 12%;
+  --popover-foreground: 200 40% 96%;
+  --primary: 190 90% 55%;
+  --primary-foreground: 190 100% 98%;
+  --secondary: 210 60% 22%;
+  --secondary-foreground: 200 40% 96%;
+  --muted: 210 60% 18%;
+  --muted-foreground: 200 25% 70%;
+  --accent: 210 60% 28%;
+  --accent-foreground: 200 40% 96%;
+  --destructive: 350 80% 55%;
+  --destructive-foreground: 350 100% 98%;
+  --border: 210 60% 22%;
+  --input: 210 60% 18%;
+  --ring: 190 90% 75%;
+  --radius: 1rem;
+}
+
+.theme-sunset {
+  --background: 25 50% 10%;
+  --foreground: 30 40% 95%;
+  --card: 25 50% 14%;
+  --card-foreground: 30 40% 95%;
+  --popover: 25 50% 10%;
+  --popover-foreground: 30 40% 95%;
+  --primary: 35 95% 60%;
+  --primary-foreground: 35 100% 98%;
+  --secondary: 25 50% 20%;
+  --secondary-foreground: 30 40% 95%;
+  --muted: 25 50% 16%;
+  --muted-foreground: 30 20% 68%;
+  --accent: 25 50% 25%;
+  --accent-foreground: 30 40% 95%;
+  --destructive: 0 80% 60%;
+  --destructive-foreground: 0 100% 98%;
+  --border: 25 50% 20%;
+  --input: 25 50% 16%;
+  --ring: 35 95% 70%;
+  --radius: 0.75rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Inter', 'Cairo', sans-serif;
+  overflow-x: hidden;
+}
+
+[dir="rtl"] {
+  font-family: 'Cairo', 'Inter', sans-serif;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, 
+    hsl(var(--primary)) 0%, 
+    hsl(var(--primary) / 0.8) 25%, 
+    hsl(var(--secondary)) 50%, 
+    hsl(var(--accent)) 75%, 
+    hsl(var(--muted)) 100%);
+}
+
+.glass-effect {
+  background: hsla(var(--card) / 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid hsla(var(--border) / 0.2);
+}
+
+.sidebar-gradient {
+  background: linear-gradient(180deg, 
+    hsl(var(--card)) 0%, 
+    hsl(var(--muted) / 0.5) 100%);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.7);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+.notification-badge {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent-foreground)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.button-gradient {
+  background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary) / 0.7));
+  color: hsl(var(--primary-foreground));
+  border: none;
+}
