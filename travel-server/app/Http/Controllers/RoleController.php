@@ -25,8 +25,8 @@ class RoleController extends Controller
             'name' => 'required|max:255|unique:roles',
             'description' => 'nullable|string',
             'permissions' => 'nullable|array',
-            'is_system' => 'boolean',
-            'can_add_items' => 'boolean',
+            'is_system' => 'nullable|boolean',
+            'can_add_items' => 'nullable|boolean',
             'default_route' => 'nullable|string'
         ]);
 

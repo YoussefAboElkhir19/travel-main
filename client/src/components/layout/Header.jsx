@@ -28,9 +28,12 @@ const Header = ({ onMenuClick }) => {
 
   const daysLeft = getDaysUntilExpiry();
   const subscriptionActive = isSubscriptionActive();
-
+  {
+    console.log(user);
+  }
   return (
-    <motion.header 
+
+    <motion.header
       className="bg-card border-b border-border px-4 lg:px-6 py-4"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -46,12 +49,13 @@ const Header = ({ onMenuClick }) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
+
+          {/* Title Dashboard And Subscription Days  */}
           <div className="hidden lg:block">
             <h1 className="text-xl font-semibold text-foreground">
               {t('dashboard')}
             </h1>
-            {!subscriptionActive && (
+            {subscriptionActive && (
               <p className="text-sm text-destructive">
                 Subscription expires in {daysLeft} days
               </p>
@@ -59,6 +63,7 @@ const Header = ({ onMenuClick }) => {
           </div>
         </div>
 
+        {/* Notifiation DropDwon  */}
         <div className={`flex items-center space-x-3 ${isRTL ? 'space-x-reverse' : ''}`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -95,22 +100,25 @@ const Header = ({ onMenuClick }) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Dark And Light Mode  */}
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'theme-default' : 'light')}>
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
 
+          {/* Languages Arabic And English  */}
           <Button variant="ghost" size="icon" onClick={() => changeLanguage(language === 'en' ? 'ar' : 'en')}>
             <Globe className="h-5 w-5" />
           </Button>
 
+          {/* Photo About User Login  */}
           <div className="flex items-center space-x-3 pl-3 border-l border-border">
             <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatar_url} alt={user?.username} />
-                <AvatarFallback>{user?.username?.[0]?.toUpperCase()}</AvatarFallback>
+              <AvatarImage src={`http://travel-server.test/uploads/users/${user?.avatar_url}`} alt={user?.user_name} />
+              <AvatarFallback>{user?.username?.[0]?.toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-foreground">{user?.username}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              <p className="text-sm font-medium text-foreground">{user?.user_name}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role?.name}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={logout} className="text-destructive hover:text-destructive">
               <LogOut className="h-5 w-5" />

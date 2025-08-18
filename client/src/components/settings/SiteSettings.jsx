@@ -24,7 +24,9 @@ const SiteSettings = ({ settings, setSettings }) => {
 
   return (
     <Card>
-      <CardHeader><CardTitle className="flex items-center space-x-2"><Icons.Globe className="h-5 w-5" /><span>{t('siteSettings')}</span></CardTitle></CardHeader>
+      <CardHeader><CardTitle className="flex items-center space-x-2">
+        <Icons.Globe className="h-5 w-5" /><span>{t('siteSettings')}</span></CardTitle>
+      </CardHeader>
       <CardContent className="space-y-4">
         <div><Label htmlFor="siteName">{t('tabTitle')}</Label><Input id="siteName" value={settings.siteName} onChange={(e) => setSettings(s => ({ ...s, siteName: e.target.value }))} /></div>
         <div className="flex items-center space-x-4">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet';
 import { Bell, Send, Mail, Users, Eye, Volume2, MailCheck } from 'lucide-react';
@@ -9,78 +9,102 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useSupabase } from '@/contexts/SupabaseContext';
 import { toast } from '@/components/ui/use-toast';
 import { Switch } from '@/components/ui/switch';
 
 const NotificationsPage = () => {
   const { t } = useLanguage();
-  const { supabase } = useSupabase();
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [sendTo, setSendTo] = useState('all');
-  const [role, setRole] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState('inApp');
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const audioRef = useRef(null);
 
-  const handleSendNotification = async () => {
-    if (!message) {
+  const API_BASE = 'http://travel-server.test/api';
+
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    message: '',
+    role_id: '',
+    sendTo: 'all',
+    deliveryMethod: 'inApp'
+  });
+
+  // Load notifications
+  // useEffect(() => {
+  //   fetch(`${API_BASE}/notifications`)
+  //     .then(res => res.json())
+  //     .then(data => setNotifications(data.data || [])) // ناخد data فقط
+  //     .catch(err => console.error(err));
+  //   // console.log(data);
+  // }, []);
+
+  // Load roles
+  useEffect(() => {
+    fetch(`${API_BASE}/roles-notifications`)
+      .then(res => res.json())
+      .then(data => setRoles(data.data || []))
+      .catch(err => console.error(err));
+  }, []);
+
+  // Sound preferences
+  // useEffect(() => {
+  //   const storedSoundPref = localStorage.getItem('notification_sound_enabled');
+  //   if (storedSoundPref !== null) {
+  //     setSoundEnabled(JSON.parse(storedSoundPref));
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   if (audioRef.current) audioRef.current.muted = !soundEnabled;
+  //   localStorage.setItem('notification_sound_enabled', JSON.stringify(soundEnabled));
+  // }, [soundEnabled]);
+
+  // Handle input change
+  const handleChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  // Send notification
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    if (!formData.message) {
       toast({ title: "Message is required", variant: "destructive" });
       return;
     }
-    if (!supabase) return;
 
-    const notificationData = {
-      text: `${title ? `**${title}**\n` : ''}${message}`,
-      role: sendTo === 'specific' ? role : null,
-    };
-
-    let emailPromise;
-    if (deliveryMethod === 'email' || deliveryMethod === 'both') {
-      emailPromise = supabase.functions.invoke('send-email-notification', {
-        body: { role: notificationData.role, text: notificationData.text },
+    try {
+      const res = await fetch(`${API_BASE}/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
       });
-    }
 
-    let inAppPromise;
-    if (deliveryMethod === 'inApp' || deliveryMethod === 'both') {
-      inAppPromise = supabase.from('notifications').insert([notificationData]);
-    }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send notification');
 
-    const [emailResult, inAppResult] = await Promise.all([emailPromise, inAppPromise]);
+      // اضف notification جديد للـ state
+      setNotifications(prev => [notifications, ...prev]);
 
-    if (emailResult?.error || inAppResult?.error) {
-      const errorMsg = emailResult?.error?.message || inAppResult?.error?.message;
-      toast({ title: "Failed to send notification", description: errorMsg, variant: "destructive" });
-    } else {
+      // رجع الفورم لحالته الأولية
+      setFormData({ title: '', message: '', role_id: '', sendTo: 'all', deliveryMethod: 'inApp' });
+
       toast({ title: t('notificationSent') });
-      setTitle('');
-      setMessage('');
+    } catch (error) {
+      toast({ title: "Failed to send notification", description: error.message, variant: "destructive" });
     }
   };
-
-  useEffect(() => {
-    const storedSoundPref = localStorage.getItem('notification_sound_enabled');
-    if (storedSoundPref !== null) {
-      setSoundEnabled(JSON.parse(storedSoundPref));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.muted = !soundEnabled;
-    }
-    localStorage.setItem('notification_sound_enabled', JSON.stringify(soundEnabled));
-  }, [soundEnabled]);
 
   return (
     <>
       <Helmet><title>{t('notifications')} - SaaS Management System</title></Helmet>
       <audio ref={audioRef} src="/notification.mp3" preload="auto" />
+
       <div className="space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gradient flex items-center space-x-3"><Bell className="h-8 w-8" /><span>{t('notifications')}</span></h1>
+          <h1 className="text-3xl font-bold text-gradient flex items-center space-x-3">
+            <Bell className="h-8 w-8" />
+            <span>{t('notifications')}</span>
+          </h1>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -88,12 +112,19 @@ const NotificationsPage = () => {
             <Card>
               <CardHeader><CardTitle>Compose Notification</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div><Label>{t('notificationTitle')}</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional title" /></div>
-                <div><Label>{t('notificationMessage')}</Label><Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Your message here..." /></div>
+                <div>
+                  <Label>{t('notificationTitle')}</Label>
+                  <Input name="title" value={formData.title} onChange={handleChange} placeholder="Optional title" />
+                </div>
+                <div>
+                  <Label>{t('notificationMessage')}</Label>
+                  <Textarea name="message" value={formData.message} onChange={handleChange} placeholder="Your message here..." />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>{t('sendTo')}</Label>
-                    <Select value={sendTo} onValueChange={setSendTo}>
+                    <Select value={formData.sendTo} onValueChange={(value) => setFormData(prev => ({ ...prev, sendTo: value }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all"><Users className="h-4 w-4 mr-2 inline-block" />{t('allEmployees')}</SelectItem>
@@ -101,23 +132,25 @@ const NotificationsPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  {sendTo === 'specific' && (
+
+                  {formData.sendTo === 'specific' && (
                     <div>
                       <Label>Role</Label>
-                      <Select value={role} onValueChange={setRole}>
+                      <Select value={formData.role_id} onValueChange={(value) => setFormData(prev => ({ ...prev, role_id: value }))}>
                         <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="employee">Employee</SelectItem>
+                          {roles.map(role => (
+                            <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   )}
                 </div>
+
                 <div>
                   <Label>{t('deliveryMethod')}</Label>
-                  <Select value={deliveryMethod} onValueChange={setDeliveryMethod}>
+                  <Select value={formData.deliveryMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, deliveryMethod: value }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="inApp"><Bell className="h-4 w-4 mr-2 inline-block" />{t('inApp')}</SelectItem>
@@ -126,25 +159,36 @@ const NotificationsPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleSendNotification} className="w-full"><Send className="h-4 w-4 mr-2" />{t('send')}</Button>
+
+                <Button onClick={handleSendNotification} className="w-full">
+                  <Send className="h-4 w-4 mr-2" />{t('send')}
+                </Button>
               </CardContent>
             </Card>
           </motion.div>
+
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-1 space-y-6">
             <Card>
-              <CardHeader><CardTitle className="flex items-center"><Eye className="h-5 w-5 mr-2" />{t('preview')}</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Eye className="h-5 w-5 mr-2" />{t('preview')}
+                </CardTitle>
+              </CardHeader>
               <CardContent>
                 <div className="p-4 rounded-lg bg-accent min-h-[150px]">
-                  {title && <p className="font-bold">{title}</p>}
-                  <p className="text-sm whitespace-pre-wrap">{message || "Your message preview will appear here."}</p>
+                  {formData.title && <p className="font-bold">{formData.title}</p>}
+                  <p className="text-sm whitespace-pre-wrap">{formData.message || "Your message preview will appear here."}</p>
                 </div>
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader><CardTitle>Notification Settings</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="sound-switch" className="flex items-center gap-2 text-lg"><Volume2 className="h-5 w-5" /> {t('sound')}</Label>
+                  <Label htmlFor="sound-switch" className="flex items-center gap-2 text-lg">
+                    <Volume2 className="h-5 w-5" /> {t('sound')}
+                  </Label>
                   <Switch id="sound-switch" checked={soundEnabled} onCheckedChange={setSoundEnabled} />
                 </div>
               </CardContent>

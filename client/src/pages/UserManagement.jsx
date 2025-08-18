@@ -1,4 +1,3 @@
-// UserManagement.jsx
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet';
@@ -38,7 +37,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
-
+import { useAuth } from '@/contexts/AuthContext';
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+// import { Switch } from '@/components/ui/switch';
 const API_BASE = 'http://travel-server.test/api';
 
 const UserManagement = () => {
@@ -47,7 +56,18 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [modal, setModal] = useState({ isOpen: false, type: null, data: null, context: null });
   const [isLoading, setIsLoading] = useState(true);
-
+  const { user, setUser } = useAuth();
+  const PERMISSIONS = [
+    'view_dashboard',
+    'view_all_attendance',
+    'manage_all_leave_requests',
+    'manage_users',
+    'manage_roles',
+    'manage_settings',
+    'send_notifications',
+    'view_reports',
+    'view_customers',
+  ];
   // Utility: ensure server response.data becomes array
   const toArray = (maybe) => {
     if (Array.isArray(maybe)) return maybe;
@@ -68,30 +88,14 @@ const UserManagement = () => {
       const rolesText = await resRoles.text();
 
       let usersResp, rolesResp;
-      try {
-        usersResp = JSON.parse(usersText);
-      } catch {
-        usersResp = { status: false, data: [] };
-      }
-      try {
-        rolesResp = JSON.parse(rolesText);
-      } catch {
-        rolesResp = { status: false, data: [] };
-      }
+      try { usersResp = JSON.parse(usersText); } catch { usersResp = { status: false, data: [] }; }
+      try { rolesResp = JSON.parse(rolesText); } catch { rolesResp = { status: false, data: [] }; }
 
-      if (usersResp.status) {
-        setUsers(toArray(usersResp.data));
-      } else {
-        setUsers([]);
-        toast({ title: 'Error: Invalid users data format', variant: 'destructive' });
-      }
+      setUsers(usersResp.status ? toArray(usersResp.data) : []);
+      setRoles(rolesResp.status ? toArray(rolesResp.data) : []);
 
-      if (rolesResp.status) {
-        setRoles(toArray(rolesResp.data));
-      } else {
-        setRoles([]);
-        toast({ title: 'Error: Invalid roles data format', variant: 'destructive' });
-      }
+      if (!usersResp.status) toast({ title: 'Error: Invalid users data format', variant: 'destructive' });
+      if (!rolesResp.status) toast({ title: 'Error: Invalid roles data format', variant: 'destructive' });
     } catch (err) {
       toast({ title: 'Error fetching data', description: err.message, variant: 'destructive' });
       setUsers([]);
@@ -101,28 +105,46 @@ const UserManagement = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchUsersAndRoles();
-  }, [fetchUsersAndRoles]);
+  useEffect(() => { fetchUsersAndRoles(); }, [fetchUsersAndRoles]);
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter(
-        (u) =>
-          (u.user_name && u.user_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      ),
-    [users, searchTerm]
-  );
+  const filteredUsers = useMemo(() =>
+    users.filter(u =>
+      (u.user_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+    ), [users, searchTerm]);
 
-  // Open modal - prepare defaultData matching backend fields
+  // ✅ FIXED: Enhanced handleChange with debugging
+  const handleChange = useCallback((field, value) => {
+    // console.log(`🔄 Updating ${field}:`, value);
+
+    setModal(prev => {
+      // console.log('📋 Previous data:', prev.data);
+
+      const newData = {
+        ...prev.data,
+        [field]: value
+      };
+
+      // console.log('✅ New data:', newData);
+
+      return {
+        ...prev,
+        data: newData
+      };
+    });
+  }, []);
+
+  // ✅ FIXED: Open modal with proper defaults
   const handleOpenModal = (type, data = null, context) => {
     let defaultData = {};
+
     if (context === 'user') {
       defaultData = data
         ? {
           ...data,
-          avatar_url: data.avatar_url || '', // reset file input; keep existing avatar in string at data.avatar_url (original) if needed
+          avatar_url: data.avatar_url || '',
+          password: '',
+          password_confirmation: '',
         }
         : {
           id: null,
@@ -135,132 +157,216 @@ const UserManagement = () => {
           bio: '',
           date_of_birth: '',
           email: '',
-          role_id: roles.find((r) => r.name === 'employee')?.id || '',
+          role_id: roles.find(r => r.name === 'employee')?.id || '',
           password: '',
+          password_confirmation: '',
           status: 'active',
-          avatar_url: '', // File or null
+          avatar_url: '',
         };
     } else {
+      // context === 'role'
+      // جهّز permissions Array + وحّد أسماء المفاتيح
+      const permissions = Array.isArray(data?.permissions)
+        ? data.permissions
+        : typeof data?.permissions === 'string'
+          ? (() => { try { return JSON.parse(data.permissions); } catch { return []; } })()
+          : [];
+
+      const systemBool =
+        typeof data?.system === 'boolean' ? data.system
+          : typeof data?.system === 'number' ? !!data.system
+            : typeof data?.is_system === 'boolean' ? data.is_system
+              : typeof data?.is_system === 'number' ? !!data.is_system
+                : false;
+
+      const canAddItemBool =
+        typeof data?.can_add_item === 'boolean' ? data.can_add_item
+          : typeof data?.can_add_item === 'number' ? !!data.can_add_item
+            : typeof data?.can_add_items === 'boolean' ? data.can_add_items
+              : typeof data?.can_add_items === 'number' ? !!data.can_add_items
+                : false;
+
       defaultData = data
-        ? { ...data }
-        : { id: null, name: '', description: '', permissions: [], is_system: false, can_add_items: false, default_route: '/attendance' };
+        ? {
+          ...data,
+          permissions,
+          // وحّد المفاتيح هنا
+          system: systemBool,
+          can_add_item: canAddItemBool,
+        }
+        : {
+          id: null,
+          name: '',
+          description: '',
+          permissions: [],
+          system: false,
+          can_add_item: false,
+          default_route: '/attendance',
+        };
     }
+
     setModal({ isOpen: true, type, data: defaultData, context });
   };
 
-  const handleChange = (field, value) => {
-    setModal((prev) => ({
-      ...prev,
-      data: {
-        ...prev.data,
-        [field]: value,
-      },
-    }));
-  };
 
-  // Prepare body: FormData if there's an avatar file, else JSON
-  const prepareRequestBody = (data) => {
-    if (data?.avatar_url instanceof File) {
-      const fd = new FormData();
-      Object.keys(data).forEach((k) => {
-        const val = data[k];
-        if (val === null || val === undefined) return;
-        // For boolean false, we still append
-        if (k === 'avatar_url') {
-          fd.append('avatar_url', val);
-        } else if (Array.isArray(val) || typeof val === 'object') {
-          fd.append(k, JSON.stringify(val));
-        } else {
-          fd.append(k, val);
-        }
-      });
-      return { body: fd, isFormData: true };
-    } else {
-      // don't include avatar_url if it's null (we don't want to overwrite existing unless file sent)
-      const clean = { ...data };
-      if (!clean.avatar_url) delete clean.avatar_url;
-      return { body: JSON.stringify(clean), isFormData: false };
+  // ✅ FIXED: Prepare request body with enhanced password handling
+  const prepareRequestBody = (data, method = 'POST', originalData = null) => {
+    const fd = new FormData();
+
+    // _method
+    if (method === 'PUT') {
+      fd.append('_method', 'PUT');
+    } else if (method === 'DELETE') {
+      fd.append('_method', 'DELETE');
     }
+
+    // طبّع الأسماء لو جات بالقديمة
+    const normalized = { ...data };
+    if ('is_system' in normalized && !('system' in normalized)) {
+      normalized.system = !!normalized.is_system;
+      delete normalized.is_system;
+    }
+    if ('can_add_items' in normalized && !('can_add_item' in normalized)) {
+      normalized.can_add_item = !!normalized.can_add_items;
+      delete normalized.can_add_items;
+    }
+
+    Object.keys(normalized).forEach((k) => {
+      const val = normalized[k];
+      if (val === null || val === undefined) return;
+
+      // Skip unchanged email on PUT
+      if (k === 'email' && originalData && originalData.email === val && method === 'PUT') {
+        return;
+      }
+
+      // Passwords
+      if (k === 'password') {
+        if (method === 'PUT' && (!val || String(val).trim() === '')) return;
+        fd.append('password', val);
+        return;
+      }
+      if (k === 'password_confirmation') {
+        if (method === 'POST' && val) fd.append('password_confirmation', val);
+        return;
+      }
+
+      // ملف الصورة
+      if (k === 'avatar_url') {
+        if (val instanceof File) fd.append('avatar_url', val);
+        return;
+      }
+
+      // permissions -> permissions[]
+      if (k === 'permissions' && Array.isArray(val)) {
+        val.forEach(p => fd.append('permissions[]', p));
+        return;
+      }
+
+      // حوّل أي boolean إلى 1/0 (خصوصًا system و can_add_item)
+      if (typeof val === 'boolean') {
+        fd.append(k, val ? 1 : 0);
+        return;
+      }
+
+      // أي شيء تاني
+      fd.append(k, val);
+    });
+
+    return { body: fd, isFormData: true };
   };
 
-  // Save handler
+  // ✅ FIXED: Save handler with proper email handling
   const handleSave = async () => {
     const data = modal.data;
     const context = modal.context;
 
     try {
-      // ✅ حل مشكلة عنصر واحد في permissions
-      if (context === 'role' && !Array.isArray(data.permissions)) {
-        data.permissions = data.permissions ? [data.permissions] : [];
-      }
       let url = `${API_BASE}/users`;
       let method = 'POST';
+      let originalData = null;
 
       if (context === 'user' && data.id) {
         url = `${API_BASE}/users/${data.id}`;
-        method = 'PUT';
+        method = 'POST'; // Use POST with _method
+        // Find original user data
+        originalData = users.find(u => u.id === data.id);
       } else if (context === 'role' && data.id) {
         url = `${API_BASE}/roles/${data.id}`;
-        method = 'PUT';
+        method = 'POST';
+        originalData = roles.find(r => r.id === data.id);
       } else if (context === 'role') {
         url = `${API_BASE}/roles`;
         method = 'POST';
       }
 
-      const { body, isFormData } = prepareRequestBody(data);
+      // Determine original method
+      const originalMethod = (context === 'user' && data.id) ? 'PUT' :
+        (context === 'role' && data.id) ? 'PUT' : 'POST';
+
+      // console.log('=== DEBUG INFO ===');
+      // console.log('Modal type:', modal.type);
+      // console.log('Context:', context);
+      // console.log('Original Data:', originalData);
+      // console.log('Request Data:', data);
+      // console.log('URL:', url);
+      // console.log('Method:', originalMethod);
+
+      const { body, isFormData } = prepareRequestBody(data, originalMethod, originalData);
+
+      // Debug FormData contents
+      if (isFormData) {
+        // console.log('FormData contents:');
+        for (let [key, value] of body.entries()) {
+          // console.log(key, ':', value);
+        }
+      }
 
       const headers = {};
       if (!isFormData) {
         headers['Content-Type'] = 'application/json';
         headers['Accept'] = 'application/json';
       } else {
-        // Let browser set Content-Type for FormData (with boundary)
         headers['Accept'] = 'application/json';
       }
 
-      const res = await fetch(url, {
-        method,
-        headers,
-        body,
-      });
-
+      const res = await fetch(url, { method, headers, body });
       const text = await res.text();
+
+      // console.log('Response Status:', res.status);
+      // console.log('Response Text:', text);
+
       let response;
       try {
         response = text ? JSON.parse(text) : { status: false, message: 'Empty response' };
       } catch (e) {
-        console.error('Failed to parse server response:', text);
+        // console.error('Failed to parse server response:', text);
         toast({
           title: 'Invalid response from server',
-          description: 'لم يتمكن التطبيق من قراءة رد السيرفر بشكل صحيح.',
+          description: 'Unable to parse server response.',
           variant: 'destructive',
         });
         return;
       }
 
-      // Normalize response.data to array
-      const respDataArray = toArray(response.data);
-
       if (response.status) {
-        toast({ title: `${context === 'user' ? 'User' : 'Role'} saved successfully` });
+        // ✅ FIXED: Enhanced success message
+        const action = data.id ? 'updated' : 'created';
+        const entityName = data.user_name || data.name || 'Item';
 
-        // Option A: if backend returns updated/created resource(s) we can merge, but simplest is to re-fetch
+        toast({
+          title: `${context === 'user' ? 'User' : 'Role'} ${action} successfully`,
+          description: `${entityName} has been ${action} successfully`
+        });
+
         await fetchUsersAndRoles();
         setModal({ isOpen: false, type: null, data: null });
       } else {
-        // Show detailed errors if any
-        const desc =
-          response.errors
-            ? JSON.stringify(response.errors)
-            : response.message || 'Unknown error';
-
-        toast({
-          title: 'Error saving data',
-          description: desc,
-          variant: 'destructive',
-        });
+        const desc = response.errors ? JSON.stringify(response.errors) : response.message || 'Unknown error';
+        toast({ title: 'Error saving data', description: desc, variant: 'destructive' });
       }
     } catch (err) {
+      // console.error('Request Error:', err);
       toast({ title: 'Request failed', description: err.message, variant: 'destructive' });
     }
   };
@@ -273,11 +379,10 @@ const UserManagement = () => {
       const text = await res.text();
       let response;
       try {
-        response = text ? JSON.parse(text) : { status: false, message: 'Empty response' };
-      } catch {
-        toast({ title: 'Invalid response from server', variant: 'destructive' });
-        return;
+        response = text ? JSON.parse(text) :
+          { status: false, message: 'Empty response' };
       }
+      catch { response = { status: false, message: 'Invalid response' }; }
 
       if (response.status) {
         toast({ title: `${context === 'user' ? 'User' : 'Role'} Deleted`, variant: 'destructive' });
@@ -291,7 +396,7 @@ const UserManagement = () => {
     }
   };
 
-  //******************************** */ Render User form***********************************************************
+  // ✅ FIXED: Render User form with disabled email during edit
   const renderUserForm = () => (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -302,11 +407,17 @@ const UserManagement = () => {
             type="email"
             value={modal.data?.email || ''}
             onChange={(e) => handleChange('email', e.target.value)}
-            disabled={modal.type === 'edit'}
+            disabled={modal.type === 'edit'} // ✅ معطل في التحديث
+            className={modal.type === 'edit' ? 'bg-muted cursor-not-allowed' : ''}
           />
+          {modal.type === 'edit' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Email cannot be changed during update
+            </p>
+          )}
         </div>
 
-        {modal.type === 'add' && (
+        {/* {modal.type === 'add' && (
           <div>
             <Label htmlFor="password">Password *</Label>
             <Input
@@ -316,17 +427,56 @@ const UserManagement = () => {
               onChange={(e) => handleChange('password', e.target.value)}
             />
           </div>
-        )}
-        <div>
-          <Label htmlFor="password_confirmation">Confirm Password *</Label>
-          <Input
-            id="password_confirmation"
-            type="password"
-            value={modal.data.password_confirmation || ''}
-            onChange={(e) => handleChange('password_confirmation', e.target.value)}
-          />
-        </div>
+        )} */}
 
+        {/* ✅ Password field logic */}
+        {modal.type === 'add' && (
+          <>
+            {/* Password field for ADD only */}
+            <div>
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={modal.data?.password || ''}
+                onChange={(e) => handleChange('password', e.target.value)}
+                placeholder="Enter password"
+              />
+            </div>
+
+            {/* Confirm Password field for ADD only */}
+            <div>
+              <Label htmlFor="password_confirmation">Confirm Password *</Label>
+              <Input
+                id="password_confirmation"
+                type="password"
+                value={modal.data?.password_confirmation || ''}
+                onChange={(e) => handleChange('password_confirmation', e.target.value)}
+                placeholder="Confirm password"
+              />
+            </div>
+          </>
+        )}
+
+        {modal.type === 'edit' && (
+          <>
+            {/* Only Password field for EDIT - no confirm needed */}
+            <div>
+              <Label htmlFor="password">New Password (Optional)</Label>
+              <Input
+                id="password"
+                type="password"
+                value={modal.data?.password || ''}
+                onChange={(e) => handleChange('password', e.target.value)}
+                placeholder="Leave empty to keep current password"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to keep current password
+              </p>
+            </div>
+
+          </>
+        )}
         <div>
           <Label htmlFor="user_name">Username</Label>
           <Input id="user_name" value={modal.data?.user_name || ''} onChange={(e) => handleChange('user_name', e.target.value)} />
@@ -381,7 +531,7 @@ const UserManagement = () => {
 
         {/* show existing avatar from backend if editing and no new file selected */}
         {modal.data?.avatar_url && typeof modal.data.avatar_url === 'string' && (
-          < img src={`http://travel-server.test/uploads/users/${modal.data.avatar_url}`} alt="Avatar" className="h-16 w-16 rounded-full mt-2 object-cover" />
+          <img src={`http://travel-server.test/uploads/users/${modal.data.avatar_url}`} alt="Avatar" className="h-16 w-16 rounded-full mt-2 object-cover" />
         )}
         {modal.data?.avatar_url instanceof File && <p className="mt-2 text-sm">Image selected: {modal.data.avatar_url.name}</p>}
       </div>
@@ -413,86 +563,120 @@ const UserManagement = () => {
       </div>
     </>
   );
-  //******************************** */ Render Role form***********************************************************
 
-  const renderRoleForm = () => (
-    <>
-      <div>
-        <Label>Role Name</Label>
-        <Input value={modal.data?.name || ''} onChange={(e) => handleChange('name', e.target.value)} />
-      </div>
-      <div>
-        <Label>Description</Label>
-        <Input value={modal.data?.description || ''} onChange={(e) => handleChange('description', e.target.value)} />
-      </div>
-      <div>
-        <Label>Default Route</Label>
-        <Input value={modal.data?.default_route || ''} onChange={(e) => handleChange('default_route', e.target.value)} placeholder="/attendance" />
-      </div>
-      {/* permissions UI simplified */}
-      {/* Permissions Selector */}
-      <label className="block mb-2 font-medium">Permissions</label>
-      <Select
-        value={modal.data?.permissions?.[0] || ''} // لو عايز تسمح بأكتر من قيمة، نعدلها
-        onValueChange={(val) => {
-          // نخزنها كمصفوفة حتى لو عنصر واحد
-          const current = Array.isArray(modal.data.permissions)
-            ? [...modal.data.permissions]
-            : [];
+  // Render Role form
+  const renderRoleForm = () => {
+    const perms = Array.isArray(modal.data?.permissions) ? modal.data.permissions : [];
 
-          if (!current.includes(val)) {
-            handleChange('permissions', [...current, val]);
-          }
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select permissions" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="view_dashboard">View Dashboard</SelectItem>
-          <SelectItem value="view_all_attendance">View All Attendance</SelectItem>
-          <SelectItem value="manage_all_leave_requests">Manage All Leave Requests</SelectItem>
-          <SelectItem value="manage_users">Manage Users</SelectItem>
-          <SelectItem value="manage_roles">Manage Roles</SelectItem>
-          <SelectItem value="manage_settings">Manage Settings</SelectItem>
-          <SelectItem value="send_notifications">Send Notifications</SelectItem>
-          <SelectItem value="view_reports">View Reports</SelectItem>
-          <SelectItem value="view_customers">View Customers</SelectItem>
-        </SelectContent>
-      </Select>
+    const togglePermission = (perm) => {
+      const set = new Set(perms);
+      if (set.has(perm)) set.delete(perm); else set.add(perm);
+      handleChange('permissions', Array.from(set));
+    };
 
-      {/*ShowSelected Permissions*/}
-      <div className="mt-2 flex flex-wrap gap-2">
-        {modal.data.permissions?.map((perm) => (
-          <span
-            key={perm}
-            className="px-2 py-1 bg-gray-800 rounded-full text-sm cursor-pointer"
-            onClick={() => {
-              handleChange(
-                'permissions',
-                modal.data.permissions.filter((p) => p !== perm)
-              );
-            }}
+    return (
+      <>
+        <div>
+          <Label>Role Name</Label>
+          <Select
+            value={modal.data?.name || ''}
+            onValueChange={(val) => handleChange('name', val)}
           >
-            {perm} ✕
-          </span>
-        ))}
-      </div>
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
+              <SelectItem value="employee">Employee</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* <div className="mt-2">
-        <Label>Permissions (IDs as array)</Label>
-        <Input
+        <div>
+          <Label>Description</Label>
+          <Input
+            value={modal.data?.description || ''}
+            onChange={(e) => handleChange('description', e.target.value)}
+          />
+        </div>
 
-          type="text"
-          value={modal.data.permissions.join(', ')}
-          onChange={(e) =>
-            handleChange('permissions', e.target.value.split(',').map(p => p.trim()))
-          }
-        />
+        <div>
+          <Label>Default Route</Label>
+          <Input
+            value={modal.data?.default_route || ''}
+            onChange={(e) => handleChange('default_route', e.target.value)}
+            placeholder="/attendance"
+          />
+        </div>
 
-      </div> */}
-    </>
-  );
+        {/* سويتشات الحقول البوليان */}
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <Label className="mb-1 block">System Role</Label>
+              <p className="text-sm text-muted-foreground">Mark as system-protected role.</p>
+            </div>
+            <Switch
+              checked={!!modal.data?.system}
+              onCheckedChange={(v) => handleChange('system', !!v)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <Label className="mb-1 block">Can Add Item</Label>
+              <p className="text-sm text-muted-foreground">Allow creating items by default.</p>
+            </div>
+            <Switch
+              checked={!!modal.data?.can_add_item}
+              onCheckedChange={(v) => handleChange('can_add_item', !!v)}
+            />
+          </div>
+        </div>
+
+        {/* Multi-Select للبرميشنز */}
+        <div className="mt-4">
+          <Label className="block mb-2 font-medium">Permissions</Label>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {perms.length ? `${perms.length} selected` : 'Select permissions'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-72">
+              <DropdownMenuLabel>Select permissions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {PERMISSIONS.map((p) => (
+                <DropdownMenuCheckboxItem
+                  key={p}
+                  checked={perms.includes(p)}
+                  onCheckedChange={() => togglePermission(p)}
+                >
+                  {p}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* chips */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {perms.map((perm) => (
+              <span
+                key={perm}
+                className="px-2 py-1 bg-gray-800 rounded-full text-sm cursor-pointer"
+                onClick={() => togglePermission(perm)}
+                title="Remove"
+              >
+                {perm} ✕
+              </span>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  };
 
   const renderContent = () => {
     if (!modal.isOpen) return null;
@@ -570,7 +754,6 @@ const UserManagement = () => {
                       <div key={u.id} className="p-3 border rounded-lg flex justify-between items-center hover:bg-accent/50">
                         <div className="flex items-center space-x-3">
                           <img src={u.avatar_url ? `http://travel-server.test/uploads/users/${u.avatar_url}` : `https://ui-avatars.com/api/?name=${u.user_name}&background=random`} alt={u.user_name} className="h-10 w-10 rounded-full object-cover" />
-
                           <div>
                             <p className="font-medium">{u.user_name}</p>
                             <p className="text-sm text-muted-foreground">{u.email}</p>
@@ -582,7 +765,8 @@ const UserManagement = () => {
                             {u.status === 'active' ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}{u.status}
                           </span>
                           <span className="capitalize text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">{u.role?.name || 'N/A'}</span>
-                          <Button size="icon" variant="ghost" onClick={() => handleOpenModal('edit', u, 'user')}><Edit className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleOpenModal('edit', u, 'user')}>
+                            <Edit className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleOpenModal('delete', u, 'user')}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </div>

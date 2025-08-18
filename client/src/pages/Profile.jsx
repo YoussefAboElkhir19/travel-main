@@ -14,29 +14,36 @@ const API_URL = 'http://travel-server.test/api';
 
 const Profile = () => {
   const { t } = useLanguage();
-  const { user, loading } = useAuth();
+  const { user, loading, token, updateUser } = useAuth();
   const fileInputRef = useRef(null);
 
   const [profile, setProfile] = useState({
-    user_name: '', email: '', first_name: '', last_name: '', phone: '', address: '', date_of_birth: '', bio: '', avatar_url: ''
+    user_name: '',
+    email: '',
+    first_name: '',
+    last_name: '',
+    phone: '',
+    bio: '',
+    status: 'active',
+    role_id: '',
+    avatar_url: '',
   });
+
   const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [uploading, setUploading] = useState(false);
 
-  const token = localStorage.getItem('token');
-
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/user/1`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`${API_URL}/users/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to fetch profile');
       const data = await res.json();
-      setProfile(data);
+      setProfile(data.data);
     } catch (err) {
       toast({ title: "Error fetching profile", description: err.message, variant: "destructive" });
     }
-  }, [token]);
+  }, [token, user.id]);
 
   useEffect(() => {
     fetchProfile();
@@ -46,21 +53,41 @@ const Profile = () => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
+  // ====================== تحديث البروفايل + الصورة ======================
   const handleSaveProfile = async () => {
     try {
-      const { role_id, created_at, updated_at, ...updateData } = profile;
-      const res = await fetch(`${API_URL}/users`, {
+      // استبعاد الحقول غير القابلة للتحديث مباشرة
+      const { role_id, created_at, updated_at, avatar_url, ...updateData } = profile;
+
+      // ارسال البيانات بدون avatar_url لو مش متغير
+      const bodyData = { ...updateData };
+
+      const res = await fetch(`${API_URL}/users/${user.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(updateData)
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(bodyData)
       });
+
       if (!res.ok) throw new Error('Error updating profile');
+
+      const data = await res.json();
+      updateUser(data.data); // ← يحدث الـ AuthContext مباشرة
+
+      // تحديث حالة الـ user في الـ frontend
+      setProfile(prev => ({ ...prev, ...data.data }));
+
       toast({ title: "Profile Updated" });
+
     } catch (err) {
       toast({ title: "Error updating profile", description: err.message, variant: "destructive" });
     }
   };
 
+
+  // ====================== تغيير كلمة المرور ======================
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({ title: "Password Mismatch", variant: "destructive" });
@@ -71,10 +98,15 @@ const Profile = () => {
       return;
     }
     try {
+      // Api call to change password Type Put 
       const res = await fetch(`${API_URL}/profile/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password: passwordData.newPassword })
+        body: JSON.stringify({
+          password: passwordData.newPassword,
+          password_confirmation: passwordData.confirmPassword
+        }),
+
       });
       if (!res.ok) throw new Error('Failed to change password');
       toast({ title: "Password Changed" });
@@ -84,6 +116,7 @@ const Profile = () => {
     }
   };
 
+  // ====================== رفع الصورة ======================
   const handleUploadAvatar = async (event) => {
     try {
       setUploading(true);
@@ -93,17 +126,17 @@ const Profile = () => {
 
       const file = event.target.files[0];
       const formData = new FormData();
-      formData.append('avatar', file);
+      formData.append('avatar_url', file);
 
-      const res = await fetch(`${API_URL}/profile/avatar`, {
+      const res = await fetch(`${API_URL}/users/${user.id}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        body: formData
+        body: formData,
       });
 
       if (!res.ok) throw new Error('Error uploading avatar');
       const data = await res.json();
-      setProfile(prev => ({ ...prev, avatar_url: data.avatar_url }));
+      setProfile(prev => ({ ...prev, avatar_url: data.data.avatar_url }));
 
       toast({ title: "Avatar updated successfully!" });
     } catch (error) {
@@ -113,30 +146,28 @@ const Profile = () => {
     }
   };
 
-  if (loading || !profile) {
-    return <div>Loading...</div>;
-  }
+  if (loading || !profile) return <div>Loading...</div>;
 
   return (
     <>
-      <Helmet><title>User Profile - SaaS Management System</title></Helmet>
-
+      <Helmet><title>User Profile</title></Helmet>
       <div className="space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gradient flex items-center space-x-3"><User className="h-8 w-8" /><span>{t('profile')}</span></h1>
+            <h1 className="text-3xl font-bold flex items-center space-x-3"><User className="h-8 w-8" /><span>{t('profile')}</span></h1>
             <p className="text-muted-foreground mt-2">Manage your personal information and account settings</p>
           </div>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Picture & Account Info */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
             <Card>
               <CardHeader><CardTitle>Profile Picture</CardTitle></CardHeader>
               <CardContent className="text-center space-y-4">
                 <div className="w-32 h-32 rounded-full mx-auto overflow-hidden bg-muted flex items-center justify-center">
                   {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={`http://travel-server.test/uploads/users/${profile.avatar_url}`} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <User className="h-16 w-16 text-muted-foreground" />
                   )}
@@ -156,13 +187,23 @@ const Profile = () => {
             <Card className="mt-6">
               <CardHeader><CardTitle className="flex items-center space-x-2"><Shield className="h-5 w-5" /><span>Account Information</span></CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Role</span><span className="text-sm font-medium text-foreground capitalize">{user?.role}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Join Date</span><span className="text-sm font-medium text-foreground">{profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Status</span><span className={`text-sm font-medium ${profile.status === 'active' ? 'text-green-500' : 'text-red-500'}`}>{profile.status}</span></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Role</span>
+                  <span className="text-sm font-medium text-foreground capitalize">{profile.role?.name || 'employee'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Join Date</span>
+                  <span className="text-sm font-medium text-foreground">{profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <span className={`text-sm font-medium ${profile.status === 'active' ? 'text-green-500' : 'text-red-500'}`}>{profile.status}</span>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
 
+          {/* Personal Info & Password */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
@@ -172,7 +213,7 @@ const Profile = () => {
                   <div><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={profile.last_name || ''} onChange={(e) => handleProfileChange('last_name', e.target.value)} /></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Label htmlFor="username">Username</Label><Input id="username" value={profile.username || ''} onChange={(e) => handleProfileChange('username', e.target.value)} /></div>
+                  <div><Label htmlFor="username">Username</Label><Input id="username" value={profile.user_name || ''} onChange={(e) => handleProfileChange('user_name', e.target.value)} /></div>
                   <div><Label htmlFor="email">Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input id="email" type="email" value={profile.email || ''} disabled className="pl-10" /></div></div>
                 </div>
                 <div><Label htmlFor="phone">Phone</Label><div className="relative"><Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input id="phone" value={profile.phone || ''} onChange={(e) => handleProfileChange('phone', e.target.value)} className="pl-10" /></div></div>
@@ -186,7 +227,8 @@ const Profile = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><Label htmlFor="newPassword">New Password</Label><Input id="newPassword" type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} placeholder="Enter new password" /></div>
-                  <div><Label htmlFor="confirmPassword">Confirm Password</Label><Input id="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} placeholder="Confirm new password" /></div>
+                  <div><Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input id="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} placeholder="Confirm new password" /></div>
                 </div>
                 <Button onClick={handleChangePassword}><Save className="h-4 w-4 mr-2" />Change Password</Button>
               </CardContent>

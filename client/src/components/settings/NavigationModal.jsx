@@ -25,15 +25,18 @@ const NavigationModal = ({ isOpen, type, data, isEditing, groups, availableRoles
     }, []);
 
     const handleChange = useCallback((field, value) => {
-      setItemData(prev => ({...prev, [field]: value}));
+        setItemData(prev => ({ ...prev, [field]: value }));
     }, []);
-    
+
     return (
+        // ========================Form Add AND Edit Items IN  sidebar===========================================
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent>
                 <DialogHeader><DialogTitle>{isEditing ? `Edit ${type}` : `Add new ${type}`}</DialogTitle></DialogHeader>
                 <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
-                    <div><Label>{t('menuItemLabel')}</Label><Input value={itemData.label} onChange={e => handleChange('label', e.target.value)} /></div>
+                    <div><Label>{t('menuItemLabel')}
+                    </Label>
+                        <Input value={itemData.label} onChange={e => handleChange('label', e.target.value)} /></div>
                     {type === 'item' && (
                         <>
                             <div><Label>{t('menuItemPath')}</Label><Input value={itemData.path} onChange={e => handleChange('path', e.target.value)} /></div>
@@ -56,12 +59,12 @@ const NavigationModal = ({ isOpen, type, data, isEditing, groups, availableRoles
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div><Label>Item Type</Label><Select value={itemData.type} onValueChange={(val) => handleChange('type', val)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="link">Internal Link</SelectItem><SelectItem value="external">External Link</SelectItem></SelectContent></Select></div>
-                            <div><Label>Group</Label><Select value={itemData.groupId} onValueChange={(val) => handleChange('groupId', val)}><SelectTrigger><SelectValue placeholder="No group"/></SelectTrigger><SelectContent>{groups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
-                             <div className="flex items-center space-x-2"><Checkbox id="new-tab-switch" checked={!!itemData.openInNewTab} onCheckedChange={(val) => handleChange('openInNewTab', val)} /><Label htmlFor="new-tab-switch">Open in new tab</Label></div>
+                            <div><Label>Item Type</Label><Select value={itemData.type} onValueChange={(val) => handleChange('type', val)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="link">Internal Link</SelectItem><SelectItem value="external">External Link</SelectItem></SelectContent></Select></div>
+                            <div><Label>Group</Label><Select value={itemData.groupId} onValueChange={(val) => handleChange('groupId', val)}><SelectTrigger><SelectValue placeholder="No group" /></SelectTrigger><SelectContent>{groups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
+                            <div className="flex items-center space-x-2"><Checkbox id="new-tab-switch" checked={!!itemData.openInNewTab} onCheckedChange={(val) => handleChange('openInNewTab', val)} /><Label htmlFor="new-tab-switch">Open in new tab</Label></div>
                         </>
                     )}
-                     <div>
+                    <div>
                         <Label>Visible to Roles (leave empty for all)</Label>
                         <div className="space-y-2 mt-2">
                             {availableRoles.map(role => (

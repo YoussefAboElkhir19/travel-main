@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Role;
 use App\Models\Leave_request;
 use App\Models\Shift;
+use App\Models\EmailAccount;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -61,6 +63,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    // =============================================================================
     // function to soft delete user and its leave requests
     // user el atmas7 ytmas7 m3a leaverequest bta3o 3lashan msh hyb2a ly m3na user=null msh sa7
     protected static function booted()
@@ -71,33 +74,46 @@ class User extends Authenticatable
             $user->leaveRequests()->delete();
             // Soft delete Shifts
             $user->shifts()->delete();
+            // Soft delete Email_accounts
+            $user->emailAccounts()->delete();
         }
     });
 }
+// =============================================================================
 
     // Role Relationships
-    public function role()
-    {
-        return $this->belongsTo(Role::class);
-    }
+public function role()
+{
+    return $this->belongsTo(Role::class);
+}
 
+// =============================================================================
     // LeaveRequest Relationship
     public function leaveRequests()
     {
         return $this->hasMany(Leave_request::class, 'user_id');
     }
-
+    
+    // =============================================================================
     // Shift Relationships
     public function shifts(): HasMany
     {
         return $this->hasMany(Shift::class);
     }
 
+    // =============================================================================
     // ToDo Relation
     public function todos(): HasMany
     {
         return $this->hasMany(Todo::class);
     }
+    // =============================================================================
+    // Email Accounts Relation
+    public function emailAccounts(): HasMany
+    {
+        return $this->hasMany(EmailAccount::class);
+    }
+    // =============================================================================
     //  public function userProfile()
     // // {
     // //     return $this->hasOne(UserProfile::class, 'id', 'id');

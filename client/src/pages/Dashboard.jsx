@@ -127,34 +127,61 @@ const Dashboard = () => {
 
     // Function Fetch Shifts Report
     const fetchShiftsReport = useCallback(async () => {
-        if (!supabase) return;
         setLoading(prev => ({ ...prev, shifts: true }));
         const { from, to } = getDateRange(shiftFilter, shiftDateRange);
         if (!from || !to) {
             setLoading(prev => ({ ...prev, shifts: false }));
             return;
         }
-        try {
-            let query = supabase
-                .from('shifts')
-                .select('*, user_profiles(username, avatar_url)')
-                .gte('start_time', from.toISOString())
-                .lte('start_time', to.toISOString())
-                .order('start_time', { ascending: false });
 
-            if (shiftUserFilter !== 'all') {
-                query = query.eq('user_id', shiftUserFilter);
+        try {
+            const token = sessionStorage.getItem('token');
+            if (!token) {
+                throw new Error('No token found in session storage');
             }
 
-            const { data, error } = await query;
-            if (error) throw error;
+            // Build query parameters
+            const params = new URLSearchParams({
+                start_date: from.toISOString().split('T')[0], // Format: YYYY-MM-DD
+                end_date: to.toISOString().split('T')[0],
+                order_by: 'start_time',
+                order_direction: 'desc'
+            });
+
+            // Add user filter if not 'all'
+            if (shiftUserFilter !== 'all') {
+                params.append('user_id', shiftUserFilter);
+            }
+            console.log('params', params);
+            const response = await fetch(`${API_BASE}/shifts/report?${params}`, {
+                method: 'GET',
+                headers: {
+                    "Content-Type": "application/vnd.api+json",
+                    "Accept": "application/vnd.api+json",
+                    "Authorization": `Bearer ${token}`,
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
             setShiftsReport(data);
+            console.log('Shifts report data:', data);
+
         } catch (error) {
-            toast({ title: t('errorFetchingShiftReport'), description: error.message, variant: "destructive" });
+            console.error('Error fetching shifts report:', error);
+            toast({
+                title: t('errorFetchingShiftReport'),
+                description: error.message,
+                variant: "destructive"
+            });
         } finally {
             setLoading(prev => ({ ...prev, shifts: false }));
         }
-    }, [supabase, shiftFilter, shiftDateRange, shiftUserFilter, t]);
+    }, [shiftFilter, shiftDateRange, shiftUserFilter, t]);
 
     useEffect(() => {
         fetchAllUsers();
@@ -232,10 +259,15 @@ const Dashboard = () => {
 
     const shiftColumns = [
         {
-            header: t('employee'), accessor: row => row.user_profiles?.username || 'N/A', render: row => (
+            header: t('employee'),
+            accessor: row => row.user?.user_name || 'N/A',
+            render: row => (
                 <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8"><AvatarImage src={row.user_profiles?.avatar_url} /><AvatarFallback>{row.user_profiles?.username?.charAt(0)}</AvatarFallback></Avatar>
-                    {row.user_profiles?.username}
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={`http://travel-server.test/uploads/users/${row?.avatar_url}`} />
+                        <AvatarFallback>{row.user?.user_name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    {row?.user_name}
                 </div>
             )
         },

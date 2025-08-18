@@ -13,7 +13,15 @@ return new class extends Migration
     {
         Schema::create('email_accounts', function (Blueprint $table) {
             $table->id();
+            $table->string('email_address');
+            $table->string('provider');
+            $table->string('smtp_server');
+            $table->integer('smtp_port');
+            $table->text('password_encrypted');
+            $table->boolean('is_active')->default(true);
+            $table->foreignId('user_id')->constrained('users');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

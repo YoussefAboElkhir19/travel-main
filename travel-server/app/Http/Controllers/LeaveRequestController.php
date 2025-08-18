@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Leave_request;
 use App\Models\User;
 use Illuminate\Http\Request;
-
 class LeaveRequestController extends Controller
 {
     /**
@@ -13,6 +12,10 @@ class LeaveRequestController extends Controller
      */
     public function index()
     {
+        // Accept Role Permmision 
+    //     if (auth()->user()->role !== 'admin') {
+    //     return response()->json(['message' => 'Unauthorized'], 403);
+    // }
         $leaveRequests = Leave_request::with('user')->get();
         // if ($leaveRequests->isEmpty()) {
         //     return response()->json(['message' => 'No leave requests found'], 404);
@@ -42,13 +45,12 @@ class LeaveRequestController extends Controller
             'notes' => 'nullable|string|max:1000',
             'status' => 'required|string|max:50',
         ]);
-        $user = auth()->user();
         try {
+            // check user is login 
+            $user = auth()->user();
 
             $leaveRequest = Leave_request::create([
-                // 'user_id' => $user->id,
-                // 'user_id' => $validatedData['user_id'],
-                'user_id' => 1,
+                'user_id' => $user->id,
                 'leave_type' => $validatedData['leave_type'],
                 'leave_date' => $validatedData['leave_date'],
                 'notes' => $validatedData['notes'],

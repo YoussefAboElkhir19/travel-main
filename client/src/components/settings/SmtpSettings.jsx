@@ -16,21 +16,21 @@ const SmtpSettings = ({ settings, setSettings }) => {
         <div>
           <Label>Default Mail Provider</Label>
           <Select value={settings.smtp.defaultProvider || 'Google Workspace'} onValueChange={(val) => setSettings(s => ({ ...s, smtp: { ...s.smtp, defaultProvider: val } }))}>
-            <SelectTrigger><SelectValue/></SelectTrigger>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-                <SelectItem value="Google Workspace">Google Workspace</SelectItem>
-                <SelectItem value="Microsoft 365">Microsoft 365</SelectItem>
-                <SelectItem value="Hostinger Mail">Hostinger Mail</SelectItem>
-                <SelectItem value="Zoho Mail">Zoho Mail</SelectItem>
+              <SelectItem value="Google Workspace">Google Workspace</SelectItem>
+              <SelectItem value="Microsoft 365">Microsoft 365</SelectItem>
+              <SelectItem value="Hostinger Mail">Hostinger Mail</SelectItem>
+              <SelectItem value="Zoho Mail">Zoho Mail</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground mt-1">This will be the default option for new employees.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><Label htmlFor="smtpServer">{t('smtpServer')}</Label><Input id="smtpServer" value={settings.smtp.server} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, server: e.target.value } }))} placeholder="e.g., smtp.hostinger.com"/></div>
-          <div><Label htmlFor="smtpPort">{t('smtpPort')}</Label><Input id="smtpPort" value={settings.smtp.port} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, port: e.target.value } }))} placeholder="e.g., 465"/></div>
-          <div><Label htmlFor="smtpEmail">{t('smtpEmail')}</Label><Input id="smtpEmail" type="email" value={settings.smtp.email} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, email: e.target.value } }))} placeholder="Your email"/></div>
-          <div><Label htmlFor="smtpPassword">{t('smtpPassword')}</Label><Input id="smtpPassword" type="password" value={settings.smtp.password} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, password: e.target.value } }))} placeholder="Your password"/></div>
+          <div><Label htmlFor="smtpServer">{t('smtpServer')}</Label><Input id="smtpServer" value={settings.smtp.server} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, server: e.target.value } }))} placeholder="e.g., smtp.hostinger.com" /></div>
+          <div><Label htmlFor="smtpPort">{t('smtpPort')}</Label><Input id="smtpPort" value={settings.smtp.port} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, port: e.target.value } }))} placeholder="e.g., 465" /></div>
+          <div><Label htmlFor="smtpEmail">{t('smtpEmail')}</Label><Input id="smtpEmail" type="email" value={settings.smtp.email} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, email: e.target.value } }))} placeholder="Your email" /></div>
+          <div><Label htmlFor="smtpPassword">{t('smtpPassword')}</Label><Input id="smtpPassword" type="password" value={settings.smtp.password} onChange={(e) => setSettings(s => ({ ...s, smtp: { ...s.smtp, password: e.target.value } }))} placeholder="Your password" /></div>
         </div>
       </CardContent>
     </Card>

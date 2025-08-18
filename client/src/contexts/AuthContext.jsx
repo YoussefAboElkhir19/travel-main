@@ -14,6 +14,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const { supabase, loading: supabaseLoading } = useSupabase();
+
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -77,13 +78,14 @@ export const AuthProvider = ({ children }) => {
         id: data.id,
         email: data.email,
         username: data.username || data.email?.split('@')[0],
-        role: data.role || 'employee',
+        role: data.role || { name: 'employee' },
         permissions: data.permissions || [],
         canAddItems: data.canAddItems || false,
         default_route: data.default_route || '/attendance',
       };
 
       setUser(userProfile);
+
       return userProfile;
 
     } catch (error) {
@@ -129,7 +131,7 @@ export const AuthProvider = ({ children }) => {
             id: data.id,
             email: data.email,
             username: data.username || data.email?.split('@')[0],
-            role: data.role || 'employee',
+            role: data.role || { name: 'employee' },
             permissions: data.permissions || [],
             canAddItems: data.canAddItems || false,
             default_route: data.default_route || '/attendance',
@@ -155,16 +157,24 @@ export const AuthProvider = ({ children }) => {
 
 
   const hasPermission = (permission) => {
-    if (user?.role === 'admin' || user?.role === 'super_admin') return true;
+    if (user?.role.name === 'admin' || user?.role.name === 'super_admin') return true;
     return user?.permissions?.includes(permission);
+  };
+  // function to Update Info Of User 
+  const updateUser = (updatedUser) => {
+    setUser(prev => ({ ...prev, ...updatedUser }));
+    sessionStorage.setItem('user', JSON.stringify({ ...user, ...updatedUser }));
   };
 
   const value = {
     user,
     loading,
+    token,
     login,
     logout,
-    hasPermission
+    hasPermission,
+    updateUser,
+    setUser
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

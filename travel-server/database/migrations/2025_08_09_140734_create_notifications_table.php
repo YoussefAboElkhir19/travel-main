@@ -12,8 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+         $table->id();
+        $table->string('title')->nullable();
+        $table->text('message');
+        $table->unsignedBigInteger('role_id')->nullable(); // الربط بالـ role
+        $table->string('sendTo');
+        $table->string('deliveryMethod');
+        $table->timestamps();
+
+
+        $table->foreign('role_id')->references('id')->on('roles')->onDelete('set null');
         });
     }
 

@@ -20,18 +20,18 @@ export const NotificationProvider = ({ children }) => {
   const { t } = useLanguage();
   const { supabase } = useSupabase();
   const { user } = useAuth();
-  
+
   const [readNotificationIds, setReadNotificationIds] = useState(new Set());
 
   const fetchNotifications = useCallback(async () => {
     if (!supabase || !user) return;
     const { data, error } = await supabase.from('notifications').select('*').or(`user_id.eq.${user.id},role.eq.${user.role},role.is.null`).order('created_at', { ascending: false }).limit(50);
-    if (error) { console.error("Error fetching notifications:", error); } 
+    if (error) { console.error("Error fetching notifications:", error); }
     else {
       const { data: readData } = await supabase.from('read_notifications').select('notification_id').eq('user_id', user.id);
       const readIds = new Set(readData.map(r => r.notification_id));
       setReadNotificationIds(readIds);
-      const enhancedNotifications = data.map(n => ({...n, is_read: readIds.has(n.id) }));
+      const enhancedNotifications = data.map(n => ({ ...n, is_read: readIds.has(n.id) }));
       setNotifications(enhancedNotifications || []);
     }
   }, [supabase, user]);
@@ -47,17 +47,17 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (!supabase || !user) return;
     const channel = supabase.channel('public:notifications').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-        const newNotification = payload.new;
-        const isForEveryone = !newNotification.user_id && !newNotification.role;
-        const isForUserRole = newNotification.role === user?.role;
-        const isForSpecificUser = newNotification.user_id === user?.id;
-        if (isForEveryone || isForUserRole || isForSpecificUser) addNotification(newNotification, true);
-      }).subscribe();
+      const newNotification = payload.new;
+      const isForEveryone = !newNotification.user_id && !newNotification.role;
+      const isForUserRole = newNotification.role === user?.role;
+      const isForSpecificUser = newNotification.user_id === user?.id;
+      if (isForEveryone || isForUserRole || isForSpecificUser) addNotification(newNotification, true);
+    }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [supabase, user, addNotification]);
 
   const markAsRead = useCallback(async (id) => {
-    if(readNotificationIds.has(id)) return;
+    if (readNotificationIds.has(id)) return;
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     setReadNotificationIds(prev => new Set(prev).add(id));
     if (supabase) await supabase.from('read_notifications').insert({ notification_id: id, user_id: user.id });
@@ -65,19 +65,19 @@ export const NotificationProvider = ({ children }) => {
 
   const markAllAsRead = useCallback(async () => {
     if (supabase && user) {
-        const unreadNotifications = notifications.filter(n => !n.is_read);
-        if (unreadNotifications.length > 0) {
-            const recordsToInsert = unreadNotifications.map(n => ({ notification_id: n.id, user_id: user.id }));
-            const { error } = await supabase.from('read_notifications').insert(recordsToInsert);
-            if (!error) {
-                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-                const newReadIds = new Set(readNotificationIds);
-                unreadNotifications.forEach(n => newReadIds.add(n.id));
-                setReadNotificationIds(newReadIds);
-            } else {
-                toast({ title: 'Error', description: 'Could not mark all as read.', variant: 'destructive'});
-            }
+      const unreadNotifications = notifications.filter(n => !n.is_read);
+      if (unreadNotifications.length > 0) {
+        const recordsToInsert = unreadNotifications.map(n => ({ notification_id: n.id, user_id: user.id }));
+        const { error } = await supabase.from('read_notifications').insert(recordsToInsert);
+        if (!error) {
+          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+          const newReadIds = new Set(readNotificationIds);
+          unreadNotifications.forEach(n => newReadIds.add(n.id));
+          setReadNotificationIds(newReadIds);
+        } else {
+          toast({ title: 'Error', description: 'Could not mark all as read.', variant: 'destructive' });
         }
+      }
     }
   }, [supabase, user, notifications, readNotificationIds]);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Breakk;
+use App\Models\Shift;
 use Illuminate\Http\Request;
 
 class BreakkController extends Controller
@@ -61,5 +62,37 @@ class BreakkController extends Controller
     public function destroy(Breakk $breakk)
     {
         //
+    }
+
+    public function startBreak(Request $request)
+    {
+        $request->validate([
+            'shift_id' => 'required|exists:shifts,id',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $userId = $request->user_id;  // This is already the user ID (integer)
+
+        $shift = Shift::where('user_id', $userId)  // Use $userId directly
+            ->whereNull('end_time')
+            ->first();
+
+        $break = Breakk::create([
+            'shift_id' => $request->shift_id,
+            'start_time' => now(),
+        ]);
+
+        // Return the created break or success response
+        return response()->json($break, 201);
+    }
+
+    public function endBreak(Request $request, $id)
+    {
+        $break = Breakk::findOrFail($id);
+        $break->update([
+            'end_time' => now(),
+        ]);
+
+        return response()->json($break,  201);
     }
 }

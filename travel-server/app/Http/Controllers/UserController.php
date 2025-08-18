@@ -6,9 +6,11 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 class UserController extends Controller
 {
+    
     public function index()
     {
         $users = User::orderBy('created_at', 'desc')->get();
@@ -86,77 +88,86 @@ class UserController extends Controller
                 ], 201);
     }
 
-       public function update(Request $request, $id)
-    {
-        $user = User::find($id);
-                 if (!$user) {
-                     return response()->json([
-                         'status' => false,
-                         'message' => 'User not found'
-                     ], 404);
-                 }
-             
-                 $validation = Validator::make($request->all(), [
-                     'first_name' => 'sometimes|required|max:255',
-                     'last_name' => 'sometimes|required|max:255',
-                     'user_name' => 'sometimes|required|max:255',
-                     // 'email' => 'sometimes|required|email|unique:users,email,' . $id,
-                     'email' => [
-                         'sometimes',
-                         'required',
-                      'email',
-                         Rule::unique('users', 'email')->ignore($id)->whereNull('deleted_at')
-             ],
-         
-                     'password' => 'nullable|min:6',
-                     'phone' => 'nullable|string',
-                     'bio' => 'nullable|string|min:10|max:100',
-                     'role_id' => 'sometimes|required|exists:roles,id',
-                     'status' => 'nullable|in:active,deactivated',
-                     'avatar_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                 ]);
-             
-                 if ($validation->fails()) {
-                     return response()->json([
-                         'status' => false,
-                         'errors' => $validation->errors()
-                     ], 422);
-                 }
-             
-             // ✅ التعامل مع الصورة
-             if ($request->hasFile('avatar_url')) {
-                 // حذف الصورة القديمة لو موجودة
-                 if ($user->avatar_url && file_exists(public_path('uploads/users/' . $user->avatar_url))) {
-                     @unlink(public_path('uploads/users/' . $user->avatar_url));
-                 }
-             
-                 // رفع الصورة الجديدة
-                 $fileName = time() . '_' . uniqid() . '.' . $request->file('avatar_url')->getClientOriginalExtension();
-                 $request->file('avatar_url')->move(public_path('uploads/users'), $fileName);
-                 $user->avatar_url = $fileName;
-             }
-         
-                 //  تحديث باقي الحقول
-             foreach (['first_name', 'last_name', 'user_name', 'email', 'phone', 'bio', 'role_id', 'status'] as $field) {
-                 if ($request->filled($field)) {
-                     $user->$field = $request->$field;
-                                 }
-                    }
-                if ($request->filled('password')) {
-                    $user->password = bcrypt($request->password);
-                }
-
-                    $user->save();
-
-        return response()->json([
-            'status' => true,
-            'message' => 'User updated successfully',
-            'data' => $user
-        ]);
+     public function update(Request $request, $id)
+{
+    $user = User::find($id);
+    if (!$user) {
+        return response()->json(['status' => false, 'message' => 'User not found'], 404);
     }
 
+    $validation = Validator::make($request->all(), [
+        'first_name' => 'sometimes|required|max:255',
+        'last_name'  => 'sometimes|required|max:255',
+        'user_name'  => 'sometimes|required|max:255',
+        'email'      => [
+            'sometimes', 'required', 'email',
+            Rule::unique('users', 'email')->ignore($id)->whereNull('deleted_at')
+        ],
+        'password'   => 'nullable|min:6',
+        'phone'      => 'nullable|string',
+        'bio'        => 'nullable|string|min:10|max:100',
+        'role_id'    => 'sometimes|required|exists:roles,id',
+        'status'     => 'nullable|in:active,deactivated',
+        'avatar_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+    ]);
+
+    if ($validation->fails()) {
+        return response()->json(['status' => false, 'errors' => $validation->errors()], 422);
+    }
+
+    // تحديث الصورة لو موجودة
+    if ($request->hasFile('avatar_url')) {
+        if ($user->avatar_url && file_exists(public_path('uploads/users/' . $user->avatar_url))) {
+            @unlink(public_path('uploads/users/' . $user->avatar_url));
+        }
+        $fileName = time() . '_' . uniqid() . '.' . $request->file('avatar_url')->getClientOriginalExtension();
+        $request->file('avatar_url')->move(public_path('uploads/users'), $fileName);
+        $user->avatar_url = $fileName;
+    }
+
+    // تحديث باقي الحقول
+    foreach (['first_name', 'last_name', 'user_name', 'email', 'phone', 'bio', 'role_id', 'status'] as $field) {
+        if ($request->filled($field)) {
+            $user->$field = $request->$field;
+        }
+    }
+
+    if ($request->filled('password')) {
+        $user->password = bcrypt($request->password);
+    }
+
+    $user->save();
+
+    return response()->json([
+        'status' => true,
+        'message' => 'User updated successfully',
+        'data' => $user
+    ]);
+}
+ public function updatePassword(Request $request ){
+    $validation = Validator::make($request->all(), [
+        'password' => 'required|min:6|confirmed',
+        
+    ]);
+   
+    if ($validation->fails()) {
+        return response()->json(['status' => false, 'errors' => $validation->errors()], 422);
+    }
+        // Get current user
+        $user = Auth::user();
+
+        // Update password
+        $user->password = Hash::make($request->password);
+        $user->save();
+    return response()->json([
+        'status' => true,
+        'message' => 'User updated successfully',
+        // 'data' => $user
+    ]);
+}
+   
     public function show($id){
-        $user = User::find($id);
+        $user = User::with('role')->find($id);
         if (!$user) {
             return response()->json([
                 'status' => false,

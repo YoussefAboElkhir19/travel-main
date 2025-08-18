@@ -19,16 +19,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const LeaveRequests = () => {
     const { t } = useLanguage();
-    const { user, hasPermission } = useAuth();
+    const { user, hasPermission, token } = useAuth();
     const [requests, setRequests] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState({ leaveType: 'weekly_leave', date: null, notes: '' });
     const [loading, setLoading] = useState(true);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
     const fetchLeaveRequests = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://travel-server.test/api/leave-requests/');
+            const res = await fetch('http://travel-server.test/api/leave-requests/',
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`, // لو API محمية بالـ token
+                    },
+                }
+            );
+
             if (!res.ok) throw new Error('Failed to fetch leave requests');
 
             const data = await res.json();
@@ -76,8 +84,9 @@ const LeaveRequests = () => {
             const res = await fetch('http://travel-server.test/api/leave-requests/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/vnd.api+json',
-                    'Accept': 'application/vnd.api+json',
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`, // لو API محمية بالـ token
+
                 },
                 body: JSON.stringify({
                     user_id: user.id,
@@ -87,6 +96,7 @@ const LeaveRequests = () => {
                     status: 'pending'
                 })
             });
+            console.log("login user", user);
             if (!res.ok) throw new Error('Failed to add leave request');
             toast({ title: t('success'), description: t('requestSent') });
             setIsModalOpen(false);
@@ -100,7 +110,8 @@ const LeaveRequests = () => {
     const handleUpdateRequest = async (id, status) => {
         try {
             await axios.put(`http://travel-server.test/api/leave-requests/${id}`, {
-                status: status // إما "approved" أو "rejected"
+                status: status,
+                // إما "approved" أو "rejected"
             });
             // setEditingRequest(null);
             fetchLeaveRequests();
