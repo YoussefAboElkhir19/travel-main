@@ -36,11 +36,11 @@ Route::apiResource('roles', RoleController::class);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/{id}', [UserController::class, 'update']); // لو FormData مع صورة
 });
-// Update Change Password Of Login user 
+// Update Change Password Of Login user
 Route::middleware('auth:sanctum')->group(function () {
-    Route::put('/profile/password', [UserController::class, 'updatePassword']); 
+    Route::put('/profile/password', [UserController::class, 'updatePassword']);
 });
-// Leave Request================================================================================== 
+// Leave Request==================================================================================
 Route::get('leave-requests', [LeaveRequestController::class, 'index']);
 // Route::post('leave-requests', [LeaveRequestController::class, 'store']);
 Route::middleware('auth:sanctum')->post('/leave-requests', [LeaveRequestController::class, 'store']);
@@ -48,10 +48,20 @@ Route::middleware('auth:sanctum')->post('/leave-requests', [LeaveRequestControll
 Route::put('/leave-requests/{id}', [LeaveRequestController::class, 'update']);
 Route::delete('/leave-requests/{id}', [LeaveRequestController::class, 'destroy']);
 
-//Notifications ========================================================================================== 
-Route::get('/notifications', [NotificationController::class, 'index']);
-Route::get('/roles-notifications', [NotificationController::class, 'getRoles']);
-Route::post('/notifications', [NotificationController::class, 'store']);
+//Notifications ==========================================================================================
+// Route::get('/notifications', [NotificationController::class, 'index']);
+// Route::get('/roles-notifications', [NotificationController::class, 'getRoles']);
+// Route::post('/notifications', [NotificationController::class, 'store']);
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/notifications/user', [NotificationController::class, 'getUserNotifications']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
+    Route::post('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications', [NotificationController::class, 'store']);
+    Route::get('/roles-notifications', [NotificationController::class, 'getRoles']);
+});
 // Company Routes======================================================================================
 Route::get('/company/{id}', [CompanyController::class, 'show']);
 Route::get('/company/subdomain/{subdomain}', [CompanyController::class, 'getBySubdomain']);
@@ -63,13 +73,13 @@ Route::post('/company/{id}/save-all-settings', [CompanyController::class, 'saveA
 Route::middleware('auth:sanctum')->group(function () {
     // Get all email accounts
     Route::get('/email-accounts', [EmailAccountController::class, 'index']);
-    
+
     // Add a new email account
     Route::post('/email-accounts', [EmailAccountController::class, 'store']);
-    
+
     // Delete an email account
     Route::delete('/email-accounts/{emailAccount}', [EmailAccountController::class, 'destroy']);
-    
+
     // Send an email via selected account
     Route::post('/emails/send', [EmailAccountController::class, 'sendEmail']);
     // Shifts  Routes======================================================================================

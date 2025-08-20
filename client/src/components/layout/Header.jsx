@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, Bell, Sun, Moon, Globe, LogOut, CheckCheck } from 'lucide-react';
+import { Menu, Bell, Sun, Moon, Globe, LogOut, CheckCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,22 +17,48 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Link } from 'react-router-dom';
 
 const Header = ({ onMenuClick }) => {
   const { theme, setTheme } = useTheme();
   const { language, changeLanguage, t, isRTL } = useLanguage();
   const { user, logout } = useAuth();
   const { getDaysUntilExpiry, isSubscriptionActive } = useCompany();
-  const { notifications, markAsRead, unreadCount, markAllAsRead } = useNotifications();
+  const { 
+    notifications, 
+    markAsRead, 
+    unreadCount, 
+    markAllAsRead, 
+    isLoading,
+    refreshNotifications 
+  } = useNotifications();
+
+  const [display , setDisplay ] = useState();
+
 
   const daysLeft = getDaysUntilExpiry();
   const subscriptionActive = isSubscriptionActive();
-  {
-    console.log(user);
-  }
-  return (
 
+  const handleNotificationClick = (notification) => {
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+      refreshNotifications();
+
+    }
+  };
+
+  const handleMarkAllAsRead = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    markAllAsRead();
+  };
+
+  const handleRefreshNotifications = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    refreshNotifications();
+  };
+
+  return (
     <motion.header
       className="bg-card border-b border-border px-4 lg:px-6 py-4"
       initial={{ opacity: 0, y: -20 }}
@@ -63,7 +89,7 @@ const Header = ({ onMenuClick }) => {
           </div>
         </div>
 
-        {/* Notifiation DropDwon  */}
+        {/* Notification Dropdown  */}
         <div className={`flex items-center space-x-3 ${isRTL ? 'space-x-reverse' : ''}`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -73,29 +99,114 @@ const Header = ({ onMenuClick }) => {
                 className="relative"
               >
                 <Bell className="h-5 w-5" />
-                {unreadCount > 0 && <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full notification-badge"></span>}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <div className="flex justify-between items-center px-2 py-1.5">
-                <DropdownMenuLabel>{t('notifications')}</DropdownMenuLabel>
-                {unreadCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}>
-                    <CheckCheck className="h-4 w-4 mr-1" /> {t('readAll')}
+                <DropdownMenuLabel className="flex items-center gap-2">
+                  {t('notifications')}
+                  {isLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                </DropdownMenuLabel>
+                <div className="flex gap-1">
+                  {/* Refresh Button */}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleRefreshNotifications}
+                    disabled={isLoading}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Bell className="h-3 w-3" />
                   </Button>
-                )}
+                  {/* Mark All as Read Button */}
+                  {unreadCount > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleMarkAllAsRead}
+                      className="h-6 text-xs px-2"
+                    >
+                      <CheckCheck className="h-3 w-3 mr-1" /> {t('readAll') || 'Mark All Read'}
+                    </Button>
+                  )}
+                </div>
               </div>
               <DropdownMenuSeparator />
               <div className="max-h-80 overflow-y-auto">
-                {notifications.length > 0 ? notifications.map(n => (
-                  <DropdownMenuItem key={n.id} onSelect={() => markAsRead(n.id)} className={`flex items-start space-x-2 ${!n.is_read ? 'font-bold' : ''}`}>
-                    {!n.is_read && <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>}
-                    <div className="flex-1">
-                      <p className="text-sm whitespace-pre-wrap">{n.text}</p>
-                      <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
+                {isLoading && notifications.length === 0 ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Loading notifications...
+                  </div>
+                ) : notifications.length > 0 ? (
+                  notifications.map(notification => (
+                    <DropdownMenuItem 
+                      key={notification.id} 
+                      onSelect={() => handleNotificationClick(notification)}
+                      className={`flex items-start space-x-3 p-3 cursor-pointer hover:bg-accent/50 ${
+                        !notification.is_read ? 'bg-accent/20 border-l-2 border-l-primary' : ''
+                      }`}
+                    >
+                      {/* Unread indicator dot */}
+                      <div className="flex-shrink-0 pt-1">
+                        {!notification.is_read && (
+                          <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        {/* Title if available */}
+                        {notification.title && (
+                          <p className={`text-sm font-medium text-foreground mb-1 ${
+                            !notification.is_read ? 'font-semibold' : ''
+                          }`}>
+                            {notification.title}
+                          </p>
+                        )}
+                        
+                        {/* Message */}
+                        <p className={`text-sm text-muted-foreground whitespace-pre-wrap break-words ${
+                          !notification.is_read ? 'font-medium text-foreground' : ''
+                        }`}>
+                          {notification.text || notification.message}
+                        </p>
+                        
+                        {/* Timestamp and delivery method */}
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                          </p>
+                          {notification.deliveryMethod && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
+                              {notification.deliveryMethod}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Role indicator if sent to specific role */}
+                        {notification.sendTo === 'role' && notification.role && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent text-accent-foreground">
+                              Role: {notification.role.name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled className="text-center py-4">
+                    <div className="flex flex-col items-center text-muted-foreground w-full">
+                      <Bell className="h-8 w-8 mb-2 opacity-50" />
+                      <p>No notifications yet</p>
                     </div>
                   </DropdownMenuItem>
-                )) : <DropdownMenuItem disabled>No new notifications</DropdownMenuItem>}
+                )}
               </div>
             </DropdownMenuContent>
           </DropdownMenu>

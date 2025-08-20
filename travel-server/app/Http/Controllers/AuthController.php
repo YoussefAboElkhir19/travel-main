@@ -24,7 +24,7 @@ class AuthController extends Controller
     $user = Auth::user();
     $token = $user->createToken('api-token')->plainTextToken;
     // to Send Email After Login  to ( email  )
-    Mail::to($user->email)->send(new WelcomeMail());
+    // Mail::to($user->email)->send(new WelcomeMail());
     return response()->json([
         'token' => $token,
         'user' => $user->load('role'),

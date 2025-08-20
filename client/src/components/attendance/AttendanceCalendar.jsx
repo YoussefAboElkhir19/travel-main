@@ -98,6 +98,16 @@ const AttendanceCalendar = ({
         }
       }
 
+      if (Array.isArray(leaves)) {
+        leaves.forEach(leave => {
+          if (!leave?.leave_date) return;
+          const dayKey = leave.leave_date.includes('T')
+            ? format(parseISO(leave.leave_date), 'yyyy-MM-dd')
+            : leave.leave_date;
+          compiledData[dayKey] = { status: 'excused-absence', leaveData: leave };
+        });
+      }
+
       if (Array.isArray(shifts)) {
         shifts.forEach(shift => {
           if (!shift) return;
@@ -122,15 +132,7 @@ const AttendanceCalendar = ({
         }
       }
 
-      if (Array.isArray(leaves)) {
-        leaves.forEach(leave => {
-          if (!leave?.leave_date) return;
-          const dayKey = leave.leave_date.includes('T')
-            ? format(parseISO(leave.leave_date), 'yyyy-MM-dd')
-            : leave.leave_date;
-          compiledData[dayKey] = { status: 'excused-absence', leaveData: leave };
-        });
-      }
+      
 
       setMonthData(compiledData);
       if (propFetchMonthData) propFetchMonthData(currentMonth);

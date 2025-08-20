@@ -48,7 +48,8 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserProfile = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
+
       if (!token) {
         setUser(null);
         return null;
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }) => {
     const getUser = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
           setUser(null);
           return;
