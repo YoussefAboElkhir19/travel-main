@@ -1,6 +1,7 @@
 
 <?php
 
+use App\Http\Controllers\TestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthenticationController;
@@ -103,3 +104,42 @@ Route::middleware('auth:sanctum')->group(function () {
     // إجازات
     Route::get('/leave-requests/count-approved', [LeaveRequestController::class, 'countApproved']);
 });
+
+
+// Broadcasting Authentication Route ================================================================
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Your existing routes...
+
+    // Broadcasting authentication
+    Route::post('/broadcasting/auth', function (Request $request) {
+        return response()->json([
+            'auth' => hash_hmac('sha256', $request->socket_id . ':' . $request->channel_name, config('reverb.app_secret')),
+        ]);
+    });
+});
+
+// OR if you're using web routes, add this to routes/web.php
+Route::middleware(['auth:sanctum'])->post('/broadcasting/auth', function (Request $request) {
+    $user = Auth::user();
+
+    if (!$user) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    // For private channels, verify the user can access the channel
+    if (str_contains($request->channel_name, 'private-notifications.user.')) {
+        $userId = str_replace('private-notifications.user.', '', $request->channel_name);
+        if ($user->id != $userId) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+    }
+
+    return response()->json([
+        'auth' => hash_hmac('sha256', $request->socket_id . ':' . $request->channel_name, config('reverb.app_secret')),
+        'channel_data' => json_encode(['user_id' => $user->id, 'user_info' => $user]),
+    ]);
+});
+
+
+Route::get('/fire', [TestController::class, 'fire']);

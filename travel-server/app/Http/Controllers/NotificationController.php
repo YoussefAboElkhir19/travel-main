@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NotificationSent;
+use App\Events\NotificationRead;
 use App\Models\Notification;
 use App\Models\Read_Notification;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -26,8 +29,6 @@ class NotificationController extends Controller
                         $subQuery->where('sendTo', 'role')
                             ->where('role_id', $user->role_id);
                     });
-                // Note: Removed user-specific logic since your schema doesn't have user_id field
-                // If you need user-specific notifications, you'd need to add a user_id field to notifications table
             })
             ->orderBy('created_at', 'desc')
             ->limit(50)
@@ -40,7 +41,6 @@ class NotificationController extends Controller
 
         // Mark notifications as read/unread ONLY FOR THIS USER and add text field for React compatibility
         $enhancedNotifications = $notifications->map(function ($notification) use ($readNotificationIds) {
-            // FIXED: Check if THIS SPECIFIC USER has read this notification
             $notification->is_read = in_array($notification->id, $readNotificationIds);
             $notification->text = $notification->message; // Add text field for React compatibility
             return $notification;
@@ -61,7 +61,6 @@ class NotificationController extends Controller
             ->get()
             ->map(function ($notification) {
                 $notification->text = $notification->message; // Add text field for React compatibility
-                // NOTE: For admin view, we don't set is_read as it's user-specific
                 return $notification;
             });
 
@@ -83,7 +82,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    // إضافة إشعار جديد
+    // إضافة إشعار جديد مع البث المباشر
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -105,9 +104,20 @@ class NotificationController extends Controller
         // Add text field for React compatibility
         $notification->text = $notification->message;
 
+        // Determine target users for broadcasting
+        $targetUsers = [];
+        if ($notification->sendTo === 'all') {
+            $targetUsers = User::pluck('id')->toArray();
+        } elseif ($notification->sendTo === 'role' && $notification->role_id) {
+            $targetUsers = User::where('role_id', $notification->role_id)->pluck('id')->toArray();
+        }
+
+        // Broadcast the notification
+        broadcast(new NotificationSent($notification, $targetUsers))->toOthers();
+
         return response()->json([
             'status' => true,
-            'message' => 'Notification created successfully',
+            'message' => 'Notification created and broadcasted successfully',
             'data' => $notification->toArray(),
         ], 201);
     }
@@ -132,6 +142,9 @@ class NotificationController extends Controller
                 'user_id' => $user->id,
                 'notification_id' => $id
             ]);
+
+            // Broadcast that this notification was read by this user
+            broadcast(new NotificationRead($id, $user->id))->toOthers();
         }
 
         return response()->json([
@@ -155,7 +168,6 @@ class NotificationController extends Controller
                     $subQuery->where('sendTo', 'role')
                         ->where('role_id', $user->role_id);
                 });
-            // Note: Removed user-specific logic since your schema doesn't have user_id field
         })->pluck('id')->toArray();
 
         // Get notification IDs that THIS USER has already read
@@ -169,7 +181,7 @@ class NotificationController extends Controller
         // Create read records for THIS USER ONLY for unread notifications
         $recordsToInsert = array_map(function ($notificationId) use ($user) {
             return [
-                'user_id' => $user->id, // IMPORTANT: User-specific
+                'user_id' => $user->id,
                 'notification_id' => $notificationId,
                 'created_at' => now(),
                 'updated_at' => now()
@@ -178,6 +190,11 @@ class NotificationController extends Controller
 
         if (!empty($recordsToInsert)) {
             Read_Notification::insert($recordsToInsert);
+
+            // Broadcast read events for each notification
+            foreach ($unreadIds as $notificationId) {
+                broadcast(new NotificationRead($notificationId, $user->id))->toOthers();
+            }
         }
 
         return response()->json([
@@ -201,7 +218,6 @@ class NotificationController extends Controller
                     $subQuery->where('sendTo', 'role')
                         ->where('role_id', $user->role_id);
                 });
-            // Note: Removed user-specific logic since your schema doesn't have user_id field
         })->pluck('id');
 
         // Count notifications that THIS USER has read
