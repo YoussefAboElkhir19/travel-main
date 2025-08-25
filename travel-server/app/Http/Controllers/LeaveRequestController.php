@@ -128,4 +128,37 @@ class LeaveRequestController extends Controller
             'message' => 'Leave request deleted successfully'
         ]);
     }
+    public function get_leaves(Request $request)
+    {
+        $request=$request->validate([
+            'user_id' => 'exists:users,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date'
+        ]);
+
+
+        $leaves = Leave_Request::where('user_id', $request['user_id'])
+            ->where('status', 'approved')
+            ->whereBetween('leave_date', [$request['start_date'], $request['end_date']])
+            ->get(['leave_date', 'status']);
+
+        return response()->json($leaves);
+    }
+
+    public function countApproved(Request $request)
+    {
+        $userId = $request->query('user_id');
+        $start = $request->query('start');
+        $end = $request->query('end');
+
+        $count = Leave_Request::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->whereBetween('leave_date', [$start, $end])
+            ->count();
+
+        return response()->json([
+            'count' => $count,
+            'status' => true
+        ]);
+    }
 }

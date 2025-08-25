@@ -48,7 +48,8 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserProfile = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
+
       if (!token) {
         setUser(null);
         return null;
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }) => {
     const getUser = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
           setUser(null);
           return;
@@ -155,10 +156,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
-
+  // Function Check Permission ==================================================================================
   const hasPermission = (permission) => {
+    // special case of Admin Give Admin && Super All Permission
     if (user?.role.name === 'admin' || user?.role.name === 'super_admin') return true;
-    return user?.permissions?.includes(permission);
+    // check if the user has the permission [Employee ,  Manger .... ]
+    return user?.role.permissions?.includes(permission);
   };
   // function to Update Info Of User 
   const updateUser = (updatedUser) => {

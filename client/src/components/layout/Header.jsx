@@ -55,17 +55,17 @@ const Header = ({ onMenuClick }) => {
             <h1 className="text-xl font-semibold text-foreground">
               {t('dashboard')}
             </h1>
-            {subscriptionActive && (
+            {/* {subscriptionActive && (
               <p className="text-sm text-destructive">
                 Subscription expires in {daysLeft} days
               </p>
-            )}
+            )} */}
           </div>
         </div>
 
         {/* Notifiation DropDwon  */}
         <div className={`flex items-center space-x-3 ${isRTL ? 'space-x-reverse' : ''}`}>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -98,7 +98,7 @@ const Header = ({ onMenuClick }) => {
                 )) : <DropdownMenuItem disabled>No new notifications</DropdownMenuItem>}
               </div>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
 
           {/* Dark And Light Mode  */}
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'theme-default' : 'light')}>

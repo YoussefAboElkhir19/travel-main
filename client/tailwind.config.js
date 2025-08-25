@@ -51,6 +51,10 @@ module.exports = {
 					foreground: 'hsl(var(--card-foreground))',
 				},
 			},
+			scrollbar: {
+				DEFAULT: 'rounded-md bg-gray-200/50',
+				dark: 'rounded-md bg-gray-700/50',
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
