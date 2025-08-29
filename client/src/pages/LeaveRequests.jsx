@@ -16,6 +16,7 @@ import { toast } from '@/components/ui/use-toast';
 import { format, startOfToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const LeaveRequests = () => {
     const { t } = useLanguage();
@@ -179,10 +180,15 @@ const LeaveRequests = () => {
                                         <TableRow key={request.id}>
                                             {hasPermission('manage_all_leave_requests') && (
                                                 <TableCell className="flex items-center gap-2">
-                                                    <img src={`http://travel-server.test/uploads/users/${request.user.avatar_url}` || `https://ui-avatars.com/api/?name=${request.user.user_name}&background=random`} alt="" className="h-8 w-8 rounded-full" />
+                                                    {/* <img src={`http://travel-server.test/uploads/users/${request.user.avatar_url}` || `https://ui-avatars.com/api/?name=${request.user.user_name}&background=random`} alt="" className="h-8 w-8 rounded-full" /> */}
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={`http://travel-server.test/uploads/users/${request.user.avatar_url}` || `https://ui-avatars.com/api/?name=${request.user.user_name}&background=random`} />
+                                                        <AvatarFallback>{request.user?.user_name?.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
                                                     {request.user.user_name}
                                                 </TableCell>
                                             )}
+                                            {/* =============================================================== */}
                                             <TableCell className="capitalize">{t(request.leave_type)}</TableCell>
                                             <TableCell>{request.leave_date ? format(new Date(request.leave_date), 'PPP') : '-'}</TableCell>
                                             <TableCell className="max-w-xs truncate">{request.notes || '-'}</TableCell>

@@ -15,28 +15,32 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { toast } from '@/components/ui/use-toast';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard = () => {
     const { t } = useLanguage();
+    const { token } = useAuth;
     const { supabase } = useSupabase();
     const [allUsers, setAllUsers] = useState([]);
-    const [leaveRequests, setRequests] = useState([]);
-    const [shiftsReport, setShiftsReport] = useState([]);
     const [employeeStatus, setEmployeeStatus] = useState([]);
     // const [isLoading, setIsLoading] = useState(true);
     const [loading, setLoading] = useState({ leaves: true, shifts: true, status: true, users: true });
-
+    // LeaveRequests ---------------------------------------------------------
+    const [leaveRequests, setRequests] = useState([]);
+    const [filteredLeaveRequests, setFilteredLeaveRequests] = useState([]);
     const [leaveFilter, setLeaveFilter] = useState('this_month');
-    const [shiftFilter, setShiftFilter] = useState('today');
     const [leaveUserFilter, setLeaveUserFilter] = useState('all');
-    const [shiftUserFilter, setShiftUserFilter] = useState('all');
-
     const [leaveDateRange, setLeaveDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+    // Shifts ---------------------------------------------------------
+    const [shiftUserFilter, setShiftUserFilter] = useState('all');
+    const [shiftsReport, setShiftsReport] = useState([]);
+    const [shiftFilter, setShiftFilter] = useState('today');
     const [shiftDateRange, setShiftDateRange] = useState({ from: startOfDay(new Date()), to: endOfDay(new Date()) });
+    const [filteredShifts, setFilterShifts] = useState([]);
     const API_BASE = 'http://travel-server.test/api';
 
     const statusMap = {
@@ -46,6 +50,88 @@ const Dashboard = () => {
         online: { text: t('online'), color: 'text-green-500', icon: <Wifi className="h-4 w-4" /> },
         on_break: { text: t('onBreak'), color: 'text-yellow-500', icon: <Coffee className="h-4 w-4" /> },
         offline: { text: t('offline'), color: 'text-gray-500', icon: <WifiOff className="h-4 w-4" /> },
+    };
+    const filterLeaveRequests = () => {
+        let filtered = [...leaveRequests];
+
+        // 🟢 فلترة حسب اليوزر
+        if (leaveUserFilter !== "all") {
+            filtered = filtered.filter((req) => req.user_id === leaveUserFilter);
+        }
+
+        // 🟢 فلترة حسب التاريخ
+        const now = new Date();
+        let dateRange = { from: null, to: null };
+
+        switch (leaveFilter) {
+            case "today":
+                dateRange = { from: startOfDay(now), to: endOfDay(now) };
+                break;
+            case "this_week":
+                dateRange = { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) };
+                break;
+            case "this_month":
+                dateRange = { from: startOfMonth(now), to: endOfMonth(now) };
+                break;
+            case "custom":
+                if (leaveDateRange.from && leaveDateRange.to) {
+                    dateRange = { from: leaveDateRange.from, to: leaveDateRange.to };
+                }
+                break;
+            default:
+                break;
+        }
+
+        // لو في Range فلترة حسبه
+        if (dateRange.from && dateRange.to) {
+            filtered = filtered.filter((req) => {
+                const leaveDate = new Date(req.leave_date); // لازم تتأكد إن عندك الحقل ده
+                return isWithinInterval(leaveDate, { start: dateRange.from, end: dateRange.to });
+            });
+        }
+
+        setFilteredLeaveRequests(filtered);
+    };
+    const filterShifts = () => {
+        let filtered = [...shiftsReport];
+
+        // 🟢 فلترة حسب اليوزر
+        if (shiftUserFilter !== "all") {
+            filtered = filtered.filter((req) => req.user_id === shiftUserFilter);
+        }
+
+        // 🟢 فلترة حسب التاريخ
+        const now = new Date();
+        let dateRange = { from: null, to: null };
+
+        switch (filteredShifts) {
+            case "today":
+                dateRange = { from: startOfDay(now), to: endOfDay(now) };
+                break;
+            case "this_week":
+                dateRange = { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) };
+                break;
+            case "this_month":
+                dateRange = { from: startOfMonth(now), to: endOfMonth(now) };
+                break;
+            case "custom":
+                if (shiftDateRange.from && shiftDateRange.to) {
+                    dateRange = { from: shiftDateRange.from, to: shiftDateRange.to };
+                }
+                break;
+            default:
+                break;
+        }
+
+        // لو في Range فلترة حسبه
+        if (dateRange.from && dateRange.to) {
+            filtered = filtered.filter((req) => {
+                const leaveDate = new Date(req.leave_date); // لازم تتأكد إن عندك الحقل ده
+                return isWithinInterval(leaveDate, { start: dateRange.from, end: dateRange.to });
+            });
+        }
+
+        setFilterShifts(filtered);
     };
     // Function To Filtiration Data IN dASHbOARD 
     const getDateRange = (filter, customRange) => {
@@ -187,6 +273,13 @@ const Dashboard = () => {
         fetchAllUsers();
         fetchEmployeeStatus();
     }, [fetchAllUsers, fetchEmployeeStatus]);
+    useEffect(() => {
+        filterLeaveRequests();
+    }, [leaveRequests, leaveUserFilter, leaveFilter, leaveDateRange]);
+    useEffect(() => {
+        filterShifts();
+    }, [shiftsReport, shiftUserFilter, filteredShifts, shiftDateRange]);
+
 
     useEffect(() => { fetchLeaveRequests(); }, [fetchLeaveRequests]);
     useEffect(() => { fetchShiftsReport(); }, [fetchShiftsReport]);
@@ -242,8 +335,9 @@ const Dashboard = () => {
             header: t('employee'), accessor: row => row.user_profiles?.user_name || 'N/A', render: row => (
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src={`http://travel-server.test/uploads/users/${row.user?.avatar_url}`} /><AvatarFallback>{row.user?.user_name?.charAt(0)}</AvatarFallback></Avatar>
-                    {row.user?.user_name}
+                        <AvatarImage src={`http://travel-server.test/uploads/users/${row?.user.avatar_url}`} />
+                        <AvatarFallback>{row.user?.user_name?.charAt(0)}</AvatarFallback></Avatar>
+                    {row?.user.user_name}
                 </div>
             )
         },
@@ -265,7 +359,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={`http://travel-server.test/uploads/users/${row?.avatar_url}`} />
-                        <AvatarFallback>{row.user?.user_name?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{row?.user_name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     {row?.user_name}
                 </div>
@@ -360,12 +454,31 @@ const Dashboard = () => {
                                 <TableHeader>
                                     <TableRow>{leaveColumns.map(col => <TableHead key={col.header}>{col.header}</TableHead>)}</TableRow></TableHeader>
                                 <TableBody>
-                                    {loading.leaves ? <TableRow><TableCell colSpan={leaveColumns.length} className="text-center">{t('loading')}...</TableCell></TableRow> : leaveRequests.map(req => (
-                                        <TableRow key={req.id}>
-                                            {leaveColumns.map(col => <TableCell key={col.header}>{col.render ? col.render(req) : col.accessor(req)}</TableCell>)}
+                                    {loading.leaves ? (
+                                        <TableRow>
+                                            <TableCell colSpan={leaveColumns.length} className="text-center">
+                                                {t('loading')}...
+                                            </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : filteredLeaveRequests.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={leaveColumns.length} className="text-center">
+                                                {t('noData')}
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredLeaveRequests.map((req) => (
+                                            <TableRow key={req.id}>
+                                                {leaveColumns.map((col) => (
+                                                    <TableCell key={col.header}>
+                                                        {col.render ? col.render(req) : col.accessor(req)}
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))
+                                    )}
                                 </TableBody>
+
                             </Table>
                         </CardContent>
                     </Card>
@@ -376,18 +489,34 @@ const Dashboard = () => {
                     <CardHeader>
                         <div className="flex flex-wrap justify-between items-center gap-4">
                             <div className="flex-grow">
-                                <CardTitle className="flex items-center gap-2"><Clock />{t('shiftReport')}</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Clock />
+                                    {t('shiftReport')}
+                                </CardTitle>
                             </div>
+
+                            {/* ===== Filters Section ===== */}
                             <div className="flex flex-wrap items-center gap-2">
+                                {/* Filter by Employee */}
                                 <Select value={shiftUserFilter} onValueChange={setShiftUserFilter}>
-                                    <SelectTrigger className="w-auto min-w-[150px]"><SelectValue placeholder={t('filterByEmployee')} /></SelectTrigger>
+                                    <SelectTrigger className="w-auto min-w-[150px]">
+                                        <SelectValue placeholder={t('filterByEmployee')} />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">{t('allEmployees')}</SelectItem>
-                                        {allUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.username}</SelectItem>)}
+                                        {allUsers.map(user => (
+                                            <SelectItem key={user.id} value={user.id}>
+                                                {user.user_name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
+
+                                {/* Filter by Date */}
                                 <Select value={shiftFilter} onValueChange={setShiftFilter}>
-                                    <SelectTrigger className="w-auto min-w-[120px]"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="w-auto min-w-[120px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="today">{t('today')}</SelectItem>
                                         <SelectItem value="this_week">{t('thisWeek')}</SelectItem>
@@ -395,34 +524,111 @@ const Dashboard = () => {
                                         <SelectItem value="custom">{t('custom')}</SelectItem>
                                     </SelectContent>
                                 </Select>
+
+                                {/* Custom Date Range */}
                                 {shiftFilter === 'custom' && (
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="outline" className="w-[240px] justify-start text-left font-normal"><CalendarIcon className="mr-2 h-4 w-4" />
-                                                {shiftDateRange.from ? (shiftDateRange.to ? `${format(shiftDateRange.from, "dd/MM/yy")} - ${format(shiftDateRange.to, "dd/MM/yy")}` : format(shiftDateRange.from, "dd/MM/yy")) : <span>{t('pickADate')}</span>}
+                                            <Button
+                                                variant="outline"
+                                                className="w-[240px] justify-start text-left font-normal"
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {shiftDateRange.from ? (
+                                                    shiftDateRange.to ? (
+                                                        `${format(shiftDateRange.from, "dd/MM/yy")} - ${format(
+                                                            shiftDateRange.to,
+                                                            "dd/MM/yy"
+                                                        )}`
+                                                    ) : (
+                                                        format(shiftDateRange.from, "dd/MM/yy")
+                                                    )
+                                                ) : (
+                                                    <span>{t('pickADate')}</span>
+                                                )}
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="range" selected={shiftDateRange} onSelect={setShiftDateRange} initialFocus /></PopoverContent>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="range"
+                                                selected={shiftDateRange}
+                                                onSelect={setShiftDateRange}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
                                     </Popover>
                                 )}
-                                <Button variant="outline" size="sm" onClick={() => handleExport('pdf', shiftsReport, shiftColumns, 'Shifts Report')}><Download className="mr-2 h-4 w-4" />{t('pdf')}</Button>
-                                <Button variant="outline" size="sm" onClick={() => handleExport('excel', shiftsReport, shiftColumns, 'Shifts Report')}><FileText className="mr-2 h-4 w-4" />{t('excel')}</Button>
+
+                                {/* Export Buttons */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        handleExport('pdf', filteredShifts, shiftColumns, 'Shifts Report')
+                                    }
+                                >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    {t('pdf')}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        handleExport('excel', filteredShifts, shiftColumns, 'Shifts Report')
+                                    }
+                                >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    {t('excel')}
+                                </Button>
                             </div>
                         </div>
                     </CardHeader>
+
+                    {/* ===== Table Section ===== */}
                     <CardContent>
                         <Table>
-                            <TableHeader><TableRow>{shiftColumns.map(col => <TableHead key={col.header}>{col.header}</TableHead>)}</TableRow></TableHeader>
+                            <TableHeader>
+                                <TableRow>
+                                    {shiftColumns.map(col => (
+                                        <TableHead key={col.header}>{col.header}</TableHead>
+                                    ))}
+                                </TableRow>
+                            </TableHeader>
                             <TableBody>
-                                {loading.shifts ? <TableRow><TableCell colSpan={shiftColumns.length} className="text-center">{t('loading')}...</TableCell></TableRow> : shiftsReport.map(shift => (
-                                    <TableRow key={shift.id}>
-                                        {shiftColumns.map(col => <TableCell key={col.header}>{col.render ? col.render(shift) : col.accessor(shift)}</TableCell>)}
+                                {loading.shifts ? (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={shiftColumns.length}
+                                            className="text-center"
+                                        >
+                                            {t('loading')}...
+                                        </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : filteredShifts.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={shiftColumns.length}
+                                            className="text-center"
+                                        >
+                                            {t('noDataFound')}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredShifts.map(shift => (
+                                        <TableRow key={shift.id}>
+                                            {shiftColumns.map(col => (
+                                                <TableCell key={col.header}>
+                                                    {col.render ? col.render(shift) : col.accessor(shift)}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>
                 </Card>
+
             </motion.div>
         </>
     );

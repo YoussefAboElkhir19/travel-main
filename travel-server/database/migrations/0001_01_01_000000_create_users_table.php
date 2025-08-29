@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('user_name');
             $table->string('phone');
             $table->string('address');
-            $table->string('avatar_url')->nullable();   
+            $table->string('avatar_url')->nullable();
             $table->date('date_of_birth');
             $table->text('bio')->nullable();
             $table->string('status', 50)->nullable();
@@ -28,6 +28,8 @@ return new class extends Migration
             $table->string('password');
             $table->rememberToken();
             $table->foreignId('role_id')->nullable()->constrained('roles')->nullOnDelete();
+            $table->decimal('salary');
+            $table->string('payment_method');
             $table->timestamps();
             $table->softDeletes(); // ← هنا أضفت عمود deleted_at للسوفت ديليت
 

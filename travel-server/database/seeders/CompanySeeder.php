@@ -16,6 +16,11 @@ class CompanySeeder extends Seeder
     {
         $defaultNavigation = [
             ['id' => 'dashboard', 'type' => 'link', 'path' => '/dashboard', 'label' => 'Dashboard', 'icon' => 'LayoutDashboard', 'order' => 1, 'roles' => ['admin', 'manager']],
+            // EmployeeDashboard========================================================================
+            ['id' => 'employeeDashboard', 'type' => 'link', 'path' => '/employeeDashboard', 'label' => 'EmployeeDashboard', 'icon' => 'LayoutDashboard', 'order' => 1, 'roles' => ['admin', 'manager','employee']],
+            // AccountDashboard========================================================================
+            ['id' => 'AccountDashboard', 'type' => 'link', 'path' => '/accountDashboard', 'label' => 'AccountDashboard', 'icon' => 'LayoutDashboard', 'order' => 1, 'roles' => ['accountant', 'admin', 'manager','employee']],
+
             ['id' => 'attendance', 'type' => 'link', 'path' => '/attendance', 'label' => 'Shift Attendance', 'icon' => 'ClipboardCheck', 'order' => 2, 'roles' => ['employee', 'admin', 'manager']],
             ['id' => 'leave-requests', 'type' => 'link', 'path' => '/leave-requests', 'label' => 'Leave Requests', 'icon' => 'FileText', 'order' => 3, 'roles' => ['employee', 'admin', 'manager']],
             ['id' => 'my-reservations', 'type' => 'link', 'path' => '/my-reservations', 'label' => 'My Reservations', 'icon' => 'BookOpen', 'order' => 4, 'roles' => ['employee', 'admin', 'manager']],

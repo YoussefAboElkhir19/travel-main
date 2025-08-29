@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 class UserController extends Controller
 {
-    
+
     public function index()
     {
         $users = User::orderBy('created_at', 'desc')->get();
@@ -40,9 +40,11 @@ class UserController extends Controller
             'date_of_birth' => 'required|date',
             'bio' => 'nullable|min:10|max:100',
             'avatar_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'role_id' => 'required|integer'
+            'role_id' => 'required|integer',
+            'salary' => 'required|string',
+            'payment_method' => 'required|string',
                 ]);
-            
+
                 if ($validation->fails()) {
                     return response()->json([
                         'status' => false,
@@ -52,19 +54,19 @@ class UserController extends Controller
          // تحقق من وجود الصورة
                 if ($request->hasFile('avatar_url')) {
                      $file = $request->file('avatar_url');
-                
+
                      // اسم فريد للملف
                      $fileName = time() . '_' . $file->getClientOriginalName();
-                
+
                      // تخزين الملف في مجلد public/users
                      $file->move(public_path('uploads/users'), $fileName);
-                
+
                      // حفظ اسم الصورة فقط في الداتابيز
                      $avatarPath = $fileName;
                  } else {
                      $avatarPath = null;
                  }
-             
+
                 $user = new User();
                 $user->first_name = $request->first_name;
                 $user->name = $request->name;
@@ -79,8 +81,10 @@ class UserController extends Controller
                 $user->bio = $request->bio;
                 $user->status = $request->status;
                 $user->role_id = $request->role_id;
+                $user->salary = $request->salary;
+                $user->payment_method = $request->payment_method;
                 $user->save();
-             
+
                 return response()->json([
                     'status' => true,
                     'data' => [$user->toArray()],
@@ -147,9 +151,9 @@ class UserController extends Controller
  public function updatePassword(Request $request ){
     $validation = Validator::make($request->all(), [
         'password' => 'required|min:6|confirmed',
-        
+
     ]);
-   
+
     if ($validation->fails()) {
         return response()->json(['status' => false, 'errors' => $validation->errors()], 422);
     }
@@ -165,7 +169,7 @@ class UserController extends Controller
         // 'data' => $user
     ]);
 }
-   
+
     public function show($id){
         $user = User::with('role')->find($id);
         if (!$user) {

@@ -143,3 +143,15 @@ Route::middleware(['auth:sanctum'])->post('/broadcasting/auth', function (Reques
 
 
 Route::get('/fire', [TestController::class, 'fire']);
+
+# Reservation Routes======================================================================================
+use App\Http\Controllers\ReservationController;
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/reservations', [ReservationController::class, 'store']);
+    Route::get('/reservations', [ReservationController::class, 'index']);
+    Route::get('/reservations/{id}', [ReservationController::class, 'show']);
+    Route::put('/reservations/{id}', [ReservationController::class, 'update']);
+    Route::delete('/reservations/{id}', [ReservationController::class, 'destroy']);
+});

@@ -97,7 +97,10 @@ const AttendanceCalendar = ({
           compiledData[formatted] = { status: 'unexcused-absence' };
         }
       }
+// <<<<<<< HEAD
 
+// =======
+// >>>>>>> upstream/main
       if (Array.isArray(leaves)) {
         leaves.forEach(leave => {
           if (!leave?.leave_date) return;
@@ -107,7 +110,10 @@ const AttendanceCalendar = ({
           compiledData[dayKey] = { status: 'excused-absence', leaveData: leave };
         });
       }
+// <<<<<<< HEAD
 
+// =======
+// >>>>>>> upstream/main
       if (Array.isArray(shifts)) {
         shifts.forEach(shift => {
           if (!shift) return;
@@ -132,7 +138,11 @@ const AttendanceCalendar = ({
         }
       }
 
+// <<<<<<< HEAD
       
+// =======
+
+// >>>>>>> upstream/main
 
       setMonthData(compiledData);
       if (propFetchMonthData) propFetchMonthData(currentMonth);

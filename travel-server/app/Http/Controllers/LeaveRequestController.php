@@ -128,10 +128,16 @@ class LeaveRequestController extends Controller
             'message' => 'Leave request deleted successfully'
         ]);
     }
+// <<<<<<< HEAD
 
+//     public function get_leaves(Request $request)
+//     {
+//         $request = $request->validate([
+// =======
     public function get_leaves(Request $request)
     {
-        $request = $request->validate([
+        $request=$request->validate([
+// >>>>>>> upstream/main
             'user_id' => 'exists:users,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date'
@@ -163,3 +169,4 @@ class LeaveRequestController extends Controller
         ]);
     }
 }
+
