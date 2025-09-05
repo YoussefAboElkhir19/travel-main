@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
+use App\Models\Customer;
+use App\Models\Supplier;
 class Reservation extends Model
 {
     /** @use HasFactory<\Database\Factories\ReservationFactory> */
@@ -18,6 +19,7 @@ class Reservation extends Model
         'reservable_type',
         'status',
         'notes',
+        'reason_cancelled',
         'sell_price',
         'cost',
         'fees',
@@ -32,5 +34,9 @@ class Reservation extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }
