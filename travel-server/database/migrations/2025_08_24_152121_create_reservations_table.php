@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
+            $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->onDelete('cascade');
             // بدل type + type_id → نستخدم polymorphic relation
             $table->morphs('reservable'); // ده هيعمل reservable_id + reservable_type
             // $table->enum('type',['Flight','Hotel','Cruise','Transportation','Visa','Insurance','Tickets','Appointment']);
@@ -25,6 +26,8 @@ return new class extends Migration
             $table->decimal('fees');
             $table->decimal('net_profit');
             $table->text('notes')->nullable();
+            $table->text('reason_cancelled')->nullable();
+            $table->boolean('sent')->default(false);
             $table->timestamps();
             $table->softDeletes(); // ← هنا أضفت عمود deleted_at للسوفت ديليت
         });
